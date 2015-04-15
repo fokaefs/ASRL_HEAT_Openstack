@@ -1,0 +1,57 @@
+heat_template_version: 2013-05-23
+
+description: Create a remote VM
+
+parameters:
+  key_name:
+    type: string
+    default: hongbinkey
+  flavor:
+    type: string
+    default: m1.small
+  image:
+    type: string
+    default: Ubuntu64-3
+
+resources:
+  vm_group:
+    type: OS::Heat::AutoScalingGroup
+    properties:
+      resource:
+        type: OS::Nova::Server
+        properties:
+          key_name: { get_param: key_name }
+          image: { get_param: image }
+          flavor: { get_param: flavor }
+          user_data: |
+            #!/bin/bash -x
+            apt-get update
+            apt-get install python-dev python-pip git -y
+            git clone https://github.com/jyericlin/ceilometer-saviwsscript.git /home/ubuntu/ceilometer-saviwsscript
+      min_size: 0
+      max_size: 1
+  scale_up_policy:
+    type: OS::Heat::ScalingPolicy
+    properties:
+      adjustment_type: change_in_capacity
+      auto_scaling_group_id: { get_resource: vm_group }
+      cooldown: 60
+      scaling_adjustment: 1
+  scale_down_policy:
+    type: OS::Heat::ScalingPolicy
+    properties:
+      adjustment_type: change_in_capacity
+      auto_scaling_group_id: { get_resource: vm_group }
+      cooldown: 60
+      scaling_adjustment: -1
+
+outputs:
+  server_ips:
+    description: The public IP address of the newly configured Server.
+    value: { get_attr: [vm_group, outputs_list, first_address] }
+  scale_up_url:
+    description: This URL is the webhook to scale up the group.
+    value: { get_attr: [scale_up_policy, alarm_url] }
+  scale_down_url:
+    description: This URL is the webhook to scale down the group.
+    value: { get_attr: [scale_down_policy, alarm_url] }

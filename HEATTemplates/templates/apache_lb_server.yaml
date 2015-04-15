@@ -1,0 +1,73 @@
+heat_template_version: 2013-05-23
+description: A load-balancer server
+parameters:
+  image:
+    type: string
+    description: Image used for servers
+  key:
+    type: string
+    description: SSH key to connect to the servers
+  flavor:
+    type: string
+    description: flavor used by the servers
+  servers:
+    type: comma_delimited_list
+    label: Servers
+    description: Comma separated list of servers in the cluster.
+  network:
+    type: string
+    description: Network used by the server
+resources:
+  server:
+    type: OS::Nova::Server
+    properties:
+      flavor:
+        get_param: flavor
+      image:
+        get_param: image
+      key_name:
+        get_param: key
+      metadata:
+        servers:
+          get_param: servers
+      networks:
+      - network:
+          get_param: network
+      user_data: |            
+                #!/bin/bash -v
+                
+                # install dependencies
+                apt-get update
+                apt-get -y install apache2 python
+                
+                cp /etc/apache2/mods-available/proxy.conf /etc/apache2/mods-available/proxy_bkp.conf
+                cp /etc/apache2/mods-available/proxy_balancer.conf /etc/apache2/mods-available/proxy_balancer_bkp.conf
+                
+                echo "<IfModule mod_proxy.c>
+                ProxyRequests Off
+
+                <Proxy *>
+                  AddDefaultCharset off
+                  Order deny,allow
+                  Allow from all
+                </Proxy>
+                ProxyVia On
+                </IfModule>" | tee /etc/apache2/mods-available/proxy.conf
+
+
+                a2enmod proxy
+                a2enmod proxy_balancer
+                a2enmod proxy_http
+                a2enmod proxy_ajp
+                a2enmod proxy_connect
+                
+                service apache2 start
+                
+                wget http://hypatia.cs.ualberta.ca/~fokaefs/update.py -O /etc/apache2/update.py
+                
+                # add a cron job to monitor the metadata and update haproxy
+                crontab -l >_crontab || true
+                echo "* * * * * curl -s http://169.254.169.254/openstack/latest/meta_data.json | python /etc/haproxy/update.py | /usr/bin/logger -t haproxy_update" >>_crontab
+                crontab <_crontab
+                rm _crontab
+      user_data_format: RAW

@@ -1,0 +1,55 @@
+heat_template_version: 2013-05-23
+description: A server with a MySQL database.
+parameters:
+  image:
+    type: string
+    description: Image used for servers
+  key:
+    type: string
+    description: SSH key to connect to the servers
+  flavor:
+    type: string
+    description: flavor used by the db server
+resources:
+  database_root_password:
+    type: OS::Heat::RandomString
+  mysql_db:
+    type: OS::Nova::Server
+    properties:
+      flavor:
+        get_param: flavor
+      image:
+        get_param: image
+      key_name:
+        get_param: key
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash -v
+            sudo bash -c "DEBIAN_FRONTEND=noninteractive aptitude install -q -y mysql-server"  > /dev/null 2> errors.log
+            sudo mysql -uroot -e "UPDATE mysql.user SET Password=PASSWORD('$db_rootpassword') WHERE User='root'; FLUSH PRIVILEGES;" > /dev/null 2> errors.log
+            sudo wget http://ceras.eso.yorku.ca/etavirp/mysql/mySqlScript.sql > /dev/null 2> errors.log
+            sudo mysql -uroot -p$db_rootpassword < mySqlScript.sql > /dev/null 2> errors.log
+            rm -rf mySqlScript.sql > /dev/null 2> errors.log
+            # download the config file
+            wget http://ceras.eso.yorku.ca/etavirp/mysql/my.cnf -O my.cnf.bkp
+            # generate the new config file with the bind address replaced
+            while read LINE
+            do
+                    LINE=`eval echo $LINE`
+                    echo $LINE >> my.cnf
+            done < my.cnf.bkp
+            # remove the local backup
+            rm -f my.cnf.bkp
+            # do a backup for the file on the server
+            sudo mv /etc/mysql/my.cnf /etc/mysql/my.cnf.bkp
+            # copy the configuration file to the right location
+            sudo mv -f my.cnf /etc/mysql/my.cnf
+                    
+            
+          params:
+            $db_rootpassword:
+              get_attr:
+              - database_root_password
+              - value

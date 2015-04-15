@@ -1,0 +1,125 @@
+heat_template_version: 2015-03-26T00:00:00Z
+description: This is a translation of the Hogna simple scaling method in HEAT. The Hogna topology specifies a database server, a load balancer and a web server. The autoscaling method adds or removes web servers as the CPU utilization fluctuates.
+parameters:
+  key_name:
+    type: string
+    description: Name of an existing key pair to use for the instances
+resources:
+  web-host:
+    type: OS::Heat::AutoScalingGroup
+    properties:
+      resource:
+        type: OS::Nova::Server
+        properties:
+          key_name:
+            get_param: key_name
+          image: ami-05eebb6c
+          flavor: m1.small
+          metadata:
+            metering.stack:
+              get_param: OS::stack_id
+          user_data: |
+            #!/bin/bash -x
+            apt-get update
+            apt-get install python-dev python-pip git -y
+            git clone https://github.com/jyericlin/ceilometer-saviwsscript.git /home/ubuntu/ceilometer-saviwsscript
+      min_size: 1
+      max_size: 8
+  web-balancer:
+    type: OS::Neutron::LoadBalancer
+    properties:
+      members:
+      - get_attr:
+        - web-host
+        - outputs_list
+        - first_address
+      pool_id: 3A27411F-5EBD-4299-8B15-3368DEBA0791
+      protocol_port: 80
+  data-host:
+    type: OS::Nova::Server
+    properties:
+      key_name:
+        get_param: key_name
+      image: ami-05eebb6c
+      flavor: m1.small
+      metadata:
+        metering.stack:
+          get_param: OS::stack_id
+      user_data: |
+        #!/bin/bash -x
+        apt-get update
+        apt-get install python-dev python-pip git -y
+        git clone https://github.com/jyericlin/ceilometer-saviwsscript.git /home/ubuntu/ceilometer-saviwsscript
+  scale_up_policy:
+    type: OS::Heat::ScalingPolicy
+    properties:
+      adjustment_type: change_in_capacity
+      auto_scaling_group_id:
+        get_resource: web-host
+      cooldown: 60
+      scaling_adjustment: 1
+  scale_down_policy:
+    type: OS::Heat::ScalingPolicy
+    properties:
+      adjustment_type: change_in_capacity
+      auto_scaling_group_id:
+        get_resource: web-host
+      cooldown: 60
+      scaling_adjustment: -1
+  cpu_alarm_high:
+    type: OS::Ceilometer::Alarm
+    properties:
+      description: Scale-up if the average CPU > 80% for 60 seconds
+      meter_name: cpu_util
+      statistic: avg
+      period: 60
+      evaluation_periods: 1
+      threshold: 80
+      alarm_actions:
+      - get_attr:
+        - scale_up_policy
+        - alarm_url
+      matching_metadata:
+        metadata.user_metadata.stack:
+          get_param: OS::stack_id
+      comparison_operator: gt
+  cpu_alarm_low:
+    type: OS::Ceilometer::Alarm
+    properties:
+      description: Scale-down if the average CPU < 40% for 60 seconds
+      meter_name: cpu_util
+      statistic: avg
+      period: 60
+      evaluation_periods: 1
+      threshold: 40
+      alarm_actions:
+      - get_attr:
+        - scale_down_policy
+        - alarm_url
+      matching_metadata:
+        metadata.user_metadata.stack:
+          get_param: OS::stack_id
+      comparison_operator: lt
+outputs:
+  server_ips:
+    description: |
+      List of IP addresses of each VM.
+    value:
+      get_attr:
+      - web-host
+      - outputs_list
+      - first_address
+  scale_up_url:
+    description: |
+      This URL is the webhook to scale up the group.  You can invoke the scale-up operation by doing an HTTP POST to this URL; no body nor extra headers are needed.
+    value:
+      get_attr:
+      - scale_up_policy
+      - alarm_url
+  scale_dn_url:
+    description: |
+      This URL is the webhook to scale down the group.  You can invoke the scale-down operation by doing an HTTP POST to this URL; no body nor extra headers are needed.
+    value:
+      get_attr:
+      - scale_down_policy
+      - alarm_url

@@ -1,0 +1,130 @@
+heat_template_version: 2013-05-23
+###############################################################################
+# The example is to demo the autoscaling feature.
+#
+# How to use it:
+#
+# 1. Create a stack with this template:
+#    $ heat stack-create -f autoscaling.yaml -P key_name=YOUR_KEY test
+#
+# 2. Confirm the initial number of VMs, which should be 1.
+#
+# 3. Confirm the two alarms were created:
+#    $ ceilometer alarm-list
+#    +--------------------------------------+----------------------------------+-------+---------+------------+--------------------------------+
+#    | Alarm ID                             | Name                             | State | Enabled | Continuous | Alarm condition                |
+#    +--------------------------------------+----------------------------------+-------+---------+------------+--------------------------------+
+#    | 62c6bd41-c2b6-4c55-bc58-1381112cb877 | test-cpu_alarm_high-4mksyvjld5xb | ok    | True    | True       | cpu_util > 40.0 during 1 x 60s |
+#    | 7f7f9bb7-001b-4c6a-9683-89c38d592e6c | test-cpu_alarm_low-au2manbhujwv  | ok    | True    | True       | cpu_util < 10.0 during 1 x 60s |
+#    +--------------------------------------+----------------------------------+-------+---------+------------+--------------------------------+
+#
+# 4. SSH to the VM and run a script to generate load:
+#    $ ssh ubuntu@YOUR_VM_IP_ADDRESS
+#    $ ls ~/ceilometer-saviwsscript/prime_numbers.py # confirm the script is installed. If not, wait a few seconds.
+#    $ screen -S "load" -d -m python ~/ceilometer-saviwsscript/prime_numbers.py 0 150000 0.0009
+#    $ screen -ls # confrim the screen is running.
+#    $ exit
+#
+# 5. Wait a few minutes.
+#
+# 6. Confirm the alarm 'test-cpu_alarm_high-XXXX' was triggered:
+#    $ ceilometer alarm-history -a 62c6bd41-c2b6-4c55-bc58-1381112cb877
+#
+# 7. Confirm the number of VMs was scaled to two.
+#
+# 8. Wait a few more minutes. Confirm the alarm 'test-cpu_alarm_low-XXXX' was
+#    triggered, and the number of VMs was scaled in back to one.
+###############################################################################
+
+description: >
+  This is a very simple template that illustrates the basic features
+  of OS::Heat::AutoScalingGroup when the scaled resource is an
+  OS::Nova::Server.
+
+parameters:
+  key_name:
+    type: string
+    description: Name of an existing key pair to use for the instances
+  flavor:
+    type: string
+    description: Flavor for the instances to be created
+  image:
+    type: string
+    description: Name or ID of the image to use for the instances.
+
+resources:
+  mon-vm:
+    type: OS::Heat::AutoScalingGroup
+    properties:
+      resource:
+        type: OS::Nova::Server
+        properties:
+          key_name: { get_param: key_name }
+          image: { get_param: image }
+          flavor: { get_param: flavor }
+          metadata: {"metering.stack": {get_param: "OS::stack_id"}}
+          user_data: |
+            #!/bin/bash -x
+            apt-get update
+            apt-get install python-dev python-pip git -y
+            git clone https://github.com/jyericlin/ceilometer-saviwsscript.git /home/ubuntu/ceilometer-saviwsscript
+      min_size: 1
+      max_size: 2
+  scale_up_policy:
+    type: OS::Heat::ScalingPolicy
+    properties:
+      adjustment_type: change_in_capacity
+      auto_scaling_group_id: {get_resource: mon-vm}
+      cooldown: 60
+      scaling_adjustment: 1
+  scale_down_policy:
+    type: OS::Heat::ScalingPolicy
+    properties:
+      adjustment_type: change_in_capacity
+      auto_scaling_group_id: {get_resource: mon-vm}
+      cooldown: 60
+      scaling_adjustment: -1
+  cpu_alarm_high:
+    type: OS::Ceilometer::Alarm
+    properties:
+      description: Scale-up if the average CPU > 40% for 60 seconds
+      meter_name: cpu_util
+      statistic: avg
+      period: 60
+      evaluation_periods: 1
+      threshold: 40
+      alarm_actions:
+        - {get_attr: [scale_up_policy, alarm_url]}
+      matching_metadata: {'metadata.user_metadata.stack': {get_param: "OS::stack_id"}}
+      comparison_operator: gt
+  cpu_alarm_low:
+    type: OS::Ceilometer::Alarm
+    properties:
+      description: Scale-down if the average CPU < 10% for 60 seconds
+      meter_name: cpu_util
+      statistic: avg
+      period: 60
+      evaluation_periods: 1
+      threshold: 10
+      alarm_actions:
+        - {get_attr: [scale_down_policy, alarm_url]}
+      matching_metadata: {'metadata.user_metadata.stack': {get_param: "OS::stack_id"}}
+      comparison_operator: lt
+
+outputs:
+  server_ips:
+    description: >
+      List of IP addresses of each VM.
+    value: {get_attr: ['mon-vm', 'outputs_list', 'first_address']}
+  scale_up_url:
+    description: >
+      This URL is the webhook to scale up the group.  You can invoke
+      the scale-up operation by doing an HTTP POST to this URL; no
+      body nor extra headers are needed.
+    value: {get_attr: [scale_up_policy, alarm_url]}
+  scale_dn_url:
+    description: >
+      This URL is the webhook to scale down the group.  You can invoke
+      the scale-down operation by doing an HTTP POST to this URL; no
+      body nor extra headers are needed.
+    value: {get_attr: [scale_down_policy, alarm_url]}

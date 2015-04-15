@@ -1,0 +1,150 @@
+heat_template_version: 2013-05-23
+description: AutoScaling Hogna Topology
+parameters:
+  image:
+    type: string
+    description: Image used for servers
+  key:
+    type: string
+    description: SSH key to connect to the servers
+  flavor:
+    type: string
+    description: flavor used by the web servers
+  database_flavor:
+    type: string
+    description: flavor used by the db server
+  network:
+    type: string
+    description: Network used by the server
+resources:
+  db:
+    type: mysql_db_server.yaml
+    properties:
+      image:
+        get_param: image
+      key:
+        get_param: key
+      flavor:
+        get_param: database_flavor
+  asg:
+    type: OS::Heat::AutoScalingGroup
+    properties:
+      min_size: 1
+      max_size: 8
+      resource:
+        type: tomcat_server.yaml
+        properties:
+          flavor:
+            get_param: flavor
+          image:
+            get_param: image
+          key:
+            get_param: key
+          network:
+            get_param: network
+          metadata:
+            metering.stack:
+              get_param: OS::stack_id
+          db_host:
+            get_attr:
+              -db
+              -first_address
+  web_server_scaleup_policy:
+    type: OS::Heat::ScalingPolicy
+    properties:
+      adjustment_type: change_in_capacity
+      auto_scaling_group_id:
+        get_resource: asg
+      cooldown: 60
+      scaling_adjustment: 1
+  web_server_scaledown_policy:
+    type: OS::Heat::ScalingPolicy
+    properties:
+      adjustment_type: change_in_capacity
+      auto_scaling_group_id:
+        get_resource: asg
+      cooldown: 60
+      scaling_adjustment: -1
+  cpu_alarm_high:
+    type: OS::Ceilometer::Alarm
+    properties:
+      description: Scale-up if the average CPU > 80% for 1 minute
+      meter_name: cpu_util
+      statistic: avg
+      period: 60
+      evaluation_periods: 1
+      threshold: 80
+      alarm_actions:
+      - get_attr:
+        - web_server_scaleup_policy
+        - alarm_url
+      matching_metadata:
+        metadata.user_metadata.stack:
+          get_param: OS::stack_id
+      comparison_operator: gt
+  cpu_alarm_low:
+    type: OS::Ceilometer::Alarm
+    properties:
+      description: Scale-down if the average CPU < 40% for 10 minutes
+      meter_name: cpu_util
+      statistic: avg
+      period: 600
+      evaluation_periods: 1
+      threshold: 40
+      alarm_actions:
+      - get_attr:
+        - web_server_scaledown_policy
+        - alarm_url
+      matching_metadata:
+        metadata.user_metadata.stack:
+          get_param: OS::stack_id
+      comparison_operator: lt
+  lb:
+    type: apache_lb_server.yaml
+    properties:
+      image: 
+        get_param: image
+      key:
+        get_param: key
+      flavor:
+        get_param: flavor
+      servers:
+        get_attr: [asg, ip]
+      network:
+        get_param: network 
+outputs:
+  scale_up_url:
+    description: |
+      This URL is the webhook to scale up the autoscaling group.  You can invoke the scale-up operation by doing an HTTP POST to this URL; no body nor extra headers are needed.
+    value:
+      get_attr:
+      - web_server_scaleup_policy
+      - alarm_url
+  scale_dn_url:
+    description: |
+      This URL is the webhook to scale down the autoscaling group. You can invoke the scale-down operation by doing an HTTP POST to this URL; no body nor extra headers are needed.
+    value:
+      get_attr:
+      - web_server_scaledown_policy
+      - alarm_url
+  website_url:
+    value:
+      str_replace:
+        template: http://host/DatabaseOperations/pi?digits=20&iterations=4000
+        params:
+          host:
+            get_attr:
+            - lb
+            - first_address
+    description: |
+      This URL is the "external" URL that can be used to access the Wordpress site.
+  ceilometer_query:
+    value:
+      str_replace:
+        template: |
+          ceilometer statistics -m cpu_util -q metadata.user_metadata.stack=stackval -p 600 -a avg
+        params:
+          stackval:
+            get_param: OS::stack_id
+    description: |
+      This is a Ceilometer query for statistics on the cpu_util meter Samples about OS::Nova::Server instances in this stack.  The -q parameter selects Samples according to the subject's metadata. When a VM's metadata includes an item of the form metering.X=Y, the corresponding Ceilometer resource has a metadata item of the form user_metadata.X=Y and samples about resources so tagged can be queried with a Ceilometer query term of the form metadata.user_metadata.X=Y.  In this case the nested stacks give their VMs metadata that is passed as a nested stack parameter, and this stack passes a metadata of the form metering.stack=Y, where Y is this stack's ID.

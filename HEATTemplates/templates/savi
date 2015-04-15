@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# SAVI Testbed login script
+#
+# 1. user name
+# 2. tenant name
+# 3. region name
+unset ERR
+if [[ -n "$1" ]]; then
+    USER_NAME=$1
+else
+    ERR=1
+fi
+
+if [[ -n "$2" ]]; then
+    PROJECT_NAME=$2
+else
+    ERR=1
+fi
+
+if [[ -n "$3" ]]; then
+   REGION_NAME=$3
+else
+    ERR=1
+fi
+
+if [[ -z "$ERR" ]]; then
+    read -s -p "Password: " savipw
+    echo ""
+    
+    KEYSTONE_SERVICE_HOST=iam.savitestbed.ca
+    export OS_TENANT_NAME=$PROJECT_NAME
+    export OS_USERNAME=$USER_NAME
+    export OS_REGION_NAME=$REGION_NAME
+    export OS_PASSWORD=$savipw
+    export OS_NO_CACHE=${OS_NO_CACHE:-1}
+    export OS_AUTH_URL=http://$KEYSTONE_SERVICE_HOST:5000/v2.0/
+    export NOVA_VERSION=${NOVA_VERSION:-1.1}
+    export COMPUTE_API_VERSION=${COMPUTE_API_VERSION:-$NOVA_VERSION}
+    out=`keystone token-get | grep user_id | awk '{print $2}'`
+    if [[ "$out" != "user_id" ]]; then
+        echo "Bad credentials"
+    else
+        echo "[$OS_USERNAME] is ready for [$OS_TENANT_NAME] on [$OS_REGION_NAME]."
+    fi
+else
+    echo "Usage: source savi <user> <project> <region>"
+fi
+

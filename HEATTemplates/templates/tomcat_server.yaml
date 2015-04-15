@@ -1,0 +1,79 @@
+heat_template_version: 2013-05-23
+description: A load-balancer server
+parameters:
+  image:
+    type: string
+    description: Image used for servers
+  key:
+    type: string
+    description: SSH key to connect to the servers
+  flavor:
+    type: string
+    description: flavor used by the servers
+  metadata:
+    type: json
+  network:
+    type: string
+    description: Network used by the server
+  db_host:
+    type: string
+    description: IP address of the database host
+resources:
+  server:
+    type: OS::Nova::Server
+    properties:
+      flavor:
+        get_param: flavor
+      image:
+        get_param: image
+      key_name:
+        get_param: key
+      metadata:
+        get_param: metadata
+      user_data:
+        str_replace:
+          template: |
+                #!/bin/bash -v
+                sudo apt-get install --assume-yes tomcat7 > /dev/null 2> errors.log
+                sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080 > /dev/null 2> errors.log
+                sudo iptables -t nat -A PREROUTING -p tcp --dport 433 -j REDIRECT --to-port 8433 > /dev/null 2> errors.log
+                sudo mv /usr/share/tomcat7/bin/catalina.sh /usr/share/tomcat7/bin/catalina.sh.bkp
+                sudo wget $TOMCAT_CONFIG_URL_BASE/catalina.sh -O /usr/share/tomcat7/bin/catalina.sh > /dev/null 2> errors.log
+                sudo chmod +x /usr/share/tomcat7/bin/catalina.sh
+                # check if tomcat is running
+                if [ -f "/var/run/tomcat7.pid" ]; then
+                  sudo /etc/init.d/tomcat7 stop > /dev/null
+                fi
+                sudo /etc/init.d/tomcat7 start > /dev/null
+                sudo wget http://ceras.eso.yorku.ca/etavirp/tomcat/DatabaseOperations.war -O DatabaseOperations.war > /dev/null 2> errors.log
+                sudo apt-get install --assume-yes unzip > /dev/null 2> errors.log
+                sudo unzip DatabaseOperations.war -d DatabaseOperations > /dev/null
+                sudo cp -rf DatabaseOperations /var/lib/tomcat7/webapps/
+                sudo chown -R tomcat6:tomcat7 /var/lib/tomcat6/webapps/DatabaseOperations
+                sudo rm -rf DatabaseOperations*
+                
+                sudo /etc/init.d/tomcat7 stop > /dev/null
+                sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080 > /dev/null
+                sudo sed -e "s/url.*:3306/url=\"jdbc:mysql:\\/\\/$db_host:3306/" /etc/tomcat7/Catalina/localhost/DatabaseOperations.xml > tmp
+                sudo mv /etc/tomcat7/Catalina/localhost/DatabaseOperations.xml oldDB.xml > /dev/null 
+                sudo mv tmp /etc/tomcat7/Catalina/localhost/DatabaseOperations.xml > /dev/null
+                sudo cat /etc/tomcat6/Catalina/localhost/DatabaseOperations.xml > /dev/null
+                sudo sed -e "s/url.*:3306/url=\"jdbc:mysql:\\/\\/$db_host:3306/" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml > tmp
+                sudo mv /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml oldContext.xml > /dev/null 
+                sudo mv tmp /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml > /dev/null
+                sudo cat /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml > /dev/null
+                sudo /etc/init.d/tomcat7 start > /dev/null
+          params:
+            $db_host:
+              get_param: db_host
+      user_data_format: RAW
+outputs:
+#  name:
+#    description: Name of the tiny instance.
+#    value: { get_attr: [tiny_instance, name] }
+  ip:
+    description: The IP address of the server.
+    value: { get_attr: [server, first_address] }
+#  port:
+#    description: The network port of the Flasky instance.
+#    value: { get_resource: port }
