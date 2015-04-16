@@ -37,8 +37,8 @@ resources:
                 #!/bin/bash -v
                 
                 # install dependencies
-                apt-get update
-                apt-get -y install apache2 python
+                apt-get -q update
+                apt-get -q -y install apache2 python
                 
                 cp /etc/apache2/mods-available/proxy.conf /etc/apache2/mods-available/proxy_bkp.conf
                 cp /etc/apache2/mods-available/proxy_balancer.conf /etc/apache2/mods-available/proxy_balancer_bkp.conf
@@ -63,7 +63,7 @@ resources:
                 
                 service apache2 start
                 
-                wget https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/update.py -O /etc/apache2/update.py
+                wget -q https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/update.py -O /etc/apache2/update.py
                 
                 # add a cron job to monitor the metadata and update haproxy
                 crontab -l >_crontab || true
