@@ -163,63 +163,63 @@ resources:
         metadata.user_metadata.stack:
           get_param: OS::stack_id
       comparison_operator: lt
-#  lb:
-#    type: OS::Nova::Server
-#    properties:
-#      flavor:
-#        get_param: flavor
-#      image:
-#        get_param: image
-#      key_name:
-#        get_param: key
-#      metadata:
-#        servers:
-#          get_attr: [asg, first_address]
-#      networks:
-#      - network:
-#          get_param: network
-#      user_data: |            
-#                #!/bin/bash -v
-#                
-#                # install dependencies
-#                apt-get update
-#                apt-get -y install apache2 python
-#                
-#                cp /etc/apache2/mods-available/proxy.conf /etc/apache2/mods-available/proxy_bkp.conf
-#                cp /etc/apache2/mods-available/proxy_balancer.conf /etc/apache2/mods-available/proxy_balancer_bkp.conf
-#                
-#                echo "<IfModule mod_proxy.c>
-#                ProxyRequests Off
-#
-#                <Proxy *>
-#                  AddDefaultCharset off
-#                  Order deny,allow
-#                  Allow from all
-#                </Proxy>
-#                ProxyVia On
-#                </IfModule>" | tee /etc/apache2/mods-available/proxy.conf
-#
-#
-#                a2enmod proxy
-#                a2enmod proxy_balancer
-#                a2enmod proxy_http
-#                a2enmod proxy_ajp
-#                a2enmod proxy_connect
-#                
-#                service apache2 start
-#                
-#                wget http://hypatia.cs.ualberta.ca/~fokaefs/update.py -O /etc/apache2/update.py
-#                
-#                # add a cron job to monitor the metadata and update haproxy
-#                crontab -l >_crontab || true
-#                echo "* * * * * curl -s http://169.254.169.254/openstack/latest/meta_data.json | python /etc/haproxy/update.py | /usr/bin/logger -t haproxy_update" >>_crontab
-#                crontab <_crontab
-#                rm _crontab
-#      user_data_format: RAW 
+  lb:
+    type: OS::Nova::Server
+    properties:
+      flavor:
+        get_param: flavor
+      image:
+        get_param: image
+      key_name:
+        get_param: key
+      metadata:
+        servers:
+          get_attr: [asg, first_address]
+      networks:
+      - network:
+          get_param: network
+      user_data: |            
+                #!/bin/bash -v
+                
+                # install dependencies
+                apt-get update
+                apt-get -y install apache2 python
+                
+                cp /etc/apache2/mods-available/proxy.conf /etc/apache2/mods-available/proxy_bkp.conf
+                cp /etc/apache2/mods-available/proxy_balancer.conf /etc/apache2/mods-available/proxy_balancer_bkp.conf
+                
+                echo "<IfModule mod_proxy.c>
+                ProxyRequests Off
+
+                <Proxy *>
+                  AddDefaultCharset off
+                  Order deny,allow
+                  Allow from all
+                </Proxy>
+                ProxyVia On
+                </IfModule>" | tee /etc/apache2/mods-available/proxy.conf
+
+
+                a2enmod proxy
+                a2enmod proxy_balancer
+                a2enmod proxy_http
+                a2enmod proxy_ajp
+                a2enmod proxy_connect
+                
+                service apache2 start
+                
+                wget http://hypatia.cs.ualberta.ca/~fokaefs/update.py -O /etc/apache2/update.py
+                
+                # add a cron job to monitor the metadata and update haproxy
+                crontab -l >_crontab || true
+                echo "* * * * * curl -s http://169.254.169.254/openstack/latest/meta_data.json | python /etc/haproxy/update.py | /usr/bin/logger -t haproxy_update" >>_crontab
+                crontab <_crontab
+                rm _crontab
+      user_data_format: RAW 
 outputs:
-#  load_balancer_ip:
-#    description: The private IP address of the load balancer.
-#    value: { get_attr: [lb, first_address]}
+  load_balancer_ip:
+    description: The private IP address of the load balancer.
+    value: { get_attr: [lb, first_address]}
   server_ips:
     description: The public IP address of the newly configured Server.
     value: { get_attr: [asg, outputs_list, first_address] }
@@ -237,17 +237,17 @@ outputs:
       get_attr:
       - web_server_scaledown_policy
       - alarm_url
-#  website_url:
-#    value:
-#      str_replace:
-#        template: http://host/DatabaseOperations/pi?digits=20&iterations=4000
-#        params:
-#          host:
-#            get_attr:
-#            - lb
-#            - first_address
-#    description: |
-#      This URL is the "external" URL that can be used to access the Wordpress site.
+  website_url:
+    value:
+      str_replace:
+        template: http://host/DatabaseOperations/pi?digits=20&iterations=4000
+        params:
+          host:
+            get_attr:
+            - lb
+            - first_address
+    description: |
+      This URL is the "external" URL that can be used to access the Wordpress site.
   ceilometer_query:
     value:
       str_replace:
