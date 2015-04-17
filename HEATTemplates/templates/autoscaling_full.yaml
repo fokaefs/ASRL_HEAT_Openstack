@@ -174,7 +174,7 @@ resources:
         get_param: key
       metadata:
         servers:
-          get_attr: [asg, first_address]
+          get_attr: [asg, outputs_list, first_address]
       networks:
       - network:
           get_param: network
