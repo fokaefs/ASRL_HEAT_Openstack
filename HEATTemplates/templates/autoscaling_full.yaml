@@ -33,13 +33,13 @@ resources:
         str_replace:
           template: |
             #!/bin/bash -v
-            bash -c "DEBIAN_FRONTEND=noninteractive aptitude install -q -y mysql-server"  > /dev/null 2> errors.log
+            bash -c "DEBIAN_FRONTEND=noninteractive aptitude install -y mysql-server"  > /dev/null 2> errors.log
             mysql -uroot -e "UPDATE mysql.user SET Password=PASSWORD('$db_rootpassword') WHERE User='root'; FLUSH PRIVILEGES;" > /dev/null 2> errors.log
-            wget -q http://ceras.eso.yorku.ca/etavirp/mysql/mySqlScript.sql > /dev/null 2> errors.log
+            wget http://ceras.eso.yorku.ca/etavirp/mysql/mySqlScript.sql > /dev/null 2> errors.log
             mysql -uroot -p$db_rootpassword < mySqlScript.sql > /dev/null 2> errors.log
             rm -rf mySqlScript.sql > /dev/null 2> errors.log
             # download the config file
-            wget -q http://ceras.eso.yorku.ca/etavirp/mysql/my.cnf -O my.cnf.bkp
+            wget http://ceras.eso.yorku.ca/etavirp/mysql/my.cnf -O my.cnf.bkp
             # generate the new config file with the bind address replaced
             while read LINE
             do
@@ -80,19 +80,19 @@ resources:
                 str_replace:
                   template: |
                         #!/bin/bash -v
-                        apt-get -q install --assume-yes tomcat7 > /dev/null 2> errors.log
+                        apt-get install --assume-yes tomcat7 > /dev/null 2> errors.log
                         iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080 > /dev/null 2> errors.log
                         iptables -t nat -A PREROUTING -p tcp --dport 433 -j REDIRECT --to-port 8433 > /dev/null 2> errors.log
                         mv /usr/share/tomcat7/bin/catalina.sh /usr/share/tomcat7/bin/catalina.sh.bkp
-                        wget -q $TOMCAT_CONFIG_URL_BASE/catalina.sh -O /usr/share/tomcat7/bin/catalina.sh > /dev/null 2> errors.log
+                        wget $TOMCAT_CONFIG_URL_BASE/catalina.sh -O /usr/share/tomcat7/bin/catalina.sh > /dev/null 2> errors.log
                         chmod +x /usr/share/tomcat7/bin/catalina.sh
                         # check if tomcat is running
                         if [ -f "/var/run/tomcat7.pid" ]; then
                           /etc/init.d/tomcat7 stop > /dev/null
                         fi
                         /etc/init.d/tomcat7 start > /dev/null
-                        wget -q http://ceras.eso.yorku.ca/etavirp/tomcat/DatabaseOperations.war -O DatabaseOperations.war > /dev/null 2> errors.log
-                        apt-get -q install --assume-yes unzip > /dev/null 2> errors.log
+                        wget http://ceras.eso.yorku.ca/etavirp/tomcat/DatabaseOperations.war -O DatabaseOperations.war > /dev/null 2> errors.log
+                        apt-get install --assume-yes unzip > /dev/null 2> errors.log
                         unzip DatabaseOperations.war -d DatabaseOperations > /dev/null
                         cp -rf DatabaseOperations /var/lib/tomcat7/webapps/
                         chown -R tomcat6:tomcat7 /var/lib/tomcat6/webapps/DatabaseOperations
@@ -182,8 +182,8 @@ resources:
                 #!/bin/bash -v
                 
                 # install dependencies
-                apt-get -q update
-                apt-get -q -y install apache2 python
+                apt-get update
+                apt-get -y install apache2 python
                 
                 cp /etc/apache2/mods-available/proxy.conf /etc/apache2/mods-available/proxy_bkp.conf
                 cp /etc/apache2/mods-available/proxy_balancer.conf /etc/apache2/mods-available/proxy_balancer_bkp.conf
@@ -208,7 +208,7 @@ resources:
                 
                 service apache2 start
                 
-                wget -q http://hypatia.cs.ualberta.ca/~fokaefs/update.py -O /etc/apache2/update.py
+                wget http://hypatia.cs.ualberta.ca/~fokaefs/update.py -O /etc/apache2/update.py
                 
                 # add a cron job to monitor the metadata and update haproxy
                 crontab -l >_crontab || true
@@ -252,9 +252,9 @@ outputs:
     value:
       str_replace:
         template: |
-          ceilometer statistics -m cpu_util -q metadata.user_metadata.stack=stackval -p 600 -a avg
+          ceilometer statistics -m cpu_util metadata.user_metadata.stack=stackval -p 600 -a avg
         params:
           stackval:
             get_param: OS::stack_id
     description: |
-      This is a Ceilometer query for statistics on the cpu_util meter Samples about OS::Nova::Server instances in this stack.  The -q parameter selects Samples according to the subject's metadata. When a VM's metadata includes an item of the form metering.X=Y, the corresponding Ceilometer resource has a metadata item of the form user_metadata.X=Y and samples about resources so tagged can be queried with a Ceilometer query term of the form metadata.user_metadata.X=Y.  In this case the nested stacks give their VMs metadata that is passed as a nested stack parameter, and this stack passes a metadata of the form metering.stack=Y, where Y is this stack's ID.
+      This is a Ceilometer query for statistics on the cpu_util meter Samples about OS::Nova::Server instances in this stack.  The parameter selects Samples according to the subject's metadata. When a VM's metadata includes an item of the form metering.X=Y, the corresponding Ceilometer resource has a metadata item of the form user_metadata.X=Y and samples about resources so tagged can be queried with a Ceilometer query term of the form metadata.user_metadata.X=Y.  In this case the nested stacks give their VMs metadata that is passed as a nested stack parameter, and this stack passes a metadata of the form metering.stack=Y, where Y is this stack's ID.
