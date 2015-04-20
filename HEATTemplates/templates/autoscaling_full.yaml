@@ -82,31 +82,31 @@ resources:
                         #!/bin/bash -v
                         apt-get update
                         apt-get install -y tomcat7
-                        mv /usr/share/tomcat7/bin/catalina.sh /usr/share/tomcat7/bin/catalina.sh.bkp
-                        wget http://ceras.eso.yorku.ca/etavirp/tomcat/catalina.sh -O /usr/share/tomcat7/bin/catalina.sh
-                        chmod +x /usr/share/tomcat7/bin/catalina.sh
+                        #mv /usr/share/tomcat7/bin/catalina.sh /usr/share/tomcat7/bin/catalina.sh.bkp
+                        #wget http://ceras.eso.yorku.ca/etavirp/tomcat/catalina.sh -O /usr/share/tomcat7/bin/catalina.sh
+                        #chmod +x /usr/share/tomcat7/bin/catalina.sh
                         # check if tomcat is running
-                        if [ -f "/var/run/tomcat7.pid" ]; then
-                          /etc/init.d/tomcat7 stop
-                        fi
-                        /etc/init.d/tomcat7 start
-                        wget http://ceras.eso.yorku.ca/etavirp/tomcat/DatabaseOperations.war -O DatabaseOperations.war 2> errors.log
-                        apt-get install --assume-yes unzip 2> errors.log
-                        unzip DatabaseOperations.war -d DatabaseOperations
-                        cp -rf DatabaseOperations /var/lib/tomcat7/webapps/
-                        chown -R tomcat7:tomcat7 /var/lib/tomcat7/webapps/DatabaseOperations
-                        rm -rf DatabaseOperations*
+#                        if [ -f "/var/run/tomcat7.pid" ]; then
+#                          /etc/init.d/tomcat7 stop
+#                        fi
+#                        /etc/init.d/tomcat7 start
+#                        wget http://ceras.eso.yorku.ca/etavirp/tomcat/DatabaseOperations.war -O DatabaseOperations.war 2> errors.log
+#                        apt-get install --assume-yes unzip 2> errors.log
+#                        unzip DatabaseOperations.war -d DatabaseOperations
+#                        cp -rf DatabaseOperations /var/lib/tomcat7/webapps/
+#                        chown -R tomcat7:tomcat7 /var/lib/tomcat7/webapps/DatabaseOperations
+#                        rm -rf DatabaseOperations*
                         
-                        /etc/init.d/tomcat7 stop
-                        sed -e "s/url.*:3306/url=\"jdbc:mysql:\\/\\/$db_host:3306/" /etc/tomcat7/Catalina/localhost/DatabaseOperations.xml > tmp
-                        mv /etc/tomcat7/Catalina/localhost/DatabaseOperations.xml oldDB.xml 
-                        mv tmp /etc/tomcat7/Catalina/localhost/DatabaseOperations.xml
-                        cat /etc/tomcat6/Catalina/localhost/DatabaseOperations.xml
-                        sed -e "s/url.*:3306/url=\"jdbc:mysql:\\/\\/$db_host:3306/" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml > tmp
-                        mv /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml oldContext.xml 
-                        mv tmp /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
-                        cat /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
-                        /etc/init.d/tomcat7 start
+#                        /etc/init.d/tomcat7 stop
+#                        sed -e "s/url.*:3306/url=\"jdbc:mysql:\\/\\/$db_host:3306/" /etc/tomcat7/Catalina/localhost/DatabaseOperations.xml > tmp
+#                        mv /etc/tomcat7/Catalina/localhost/DatabaseOperations.xml oldDB.xml 
+#                        mv tmp /etc/tomcat7/Catalina/localhost/DatabaseOperations.xml
+#                        cat /etc/tomcat6/Catalina/localhost/DatabaseOperations.xml
+#                        sed -e "s/url.*:3306/url=\"jdbc:mysql:\\/\\/$db_host:3306/" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml > tmp
+#                        mv /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml oldContext.xml 
+#                        mv tmp /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
+#                        cat /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
+#                        /etc/init.d/tomcat7 start
                   params:
                     $db_host:
                       get_attr: [db,first_address]
