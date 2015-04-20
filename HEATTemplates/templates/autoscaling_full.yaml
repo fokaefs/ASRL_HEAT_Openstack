@@ -33,11 +33,11 @@ resources:
         str_replace:
           template: |
             #!/bin/bash -v
-            bash -c "DEBIAN_FRONTEND=noninteractive aptitude install -y mysql-server"  > /dev/null 2> errors.log
-            mysql -uroot -e "UPDATE mysql.user SET Password=PASSWORD('$db_rootpassword') WHERE User='root'; FLUSH PRIVILEGES;" > /dev/null 2> errors.log
-            wget http://ceras.eso.yorku.ca/etavirp/mysql/mySqlScript.sql > /dev/null 2> errors.log
-            mysql -uroot -p$db_rootpassword < mySqlScript.sql > /dev/null 2> errors.log
-            rm -rf mySqlScript.sql > /dev/null 2> errors.log
+            bash -c "DEBIAN_FRONTEND=noninteractive aptitude install -y mysql-server"  2> errors.log
+            mysql -uroot -e "UPDATE mysql.user SET Password=PASSWORD('$db_rootpassword') WHERE User='root'; FLUSH PRIVILEGES;" 2> errors.log
+            wget http://ceras.eso.yorku.ca/etavirp/mysql/mySqlScript.sql 2> errors.log
+            mysql -uroot -p$db_rootpassword < mySqlScript.sql 2> errors.log
+            rm -rf mySqlScript.sql 2> errors.log
             # download the config file
             wget http://ceras.eso.yorku.ca/etavirp/mysql/my.cnf -O my.cnf.bkp
             # generate the new config file with the bind address replaced
@@ -80,35 +80,33 @@ resources:
                 str_replace:
                   template: |
                         #!/bin/bash -v
-                        apt-get install --assume-yes tomcat7 > /dev/null 2> errors.log
-                        iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080 > /dev/null 2> errors.log
-                        iptables -t nat -A PREROUTING -p tcp --dport 433 -j REDIRECT --to-port 8433 > /dev/null 2> errors.log
+                        apt-get update
+                        apt-get install -y tomcat7
                         mv /usr/share/tomcat7/bin/catalina.sh /usr/share/tomcat7/bin/catalina.sh.bkp
-                        wget $TOMCAT_CONFIG_URL_BASE/catalina.sh -O /usr/share/tomcat7/bin/catalina.sh > /dev/null 2> errors.log
+                        wget http://ceras.eso.yorku.ca/etavirp/tomcat/catalina.sh -O /usr/share/tomcat7/bin/catalina.sh
                         chmod +x /usr/share/tomcat7/bin/catalina.sh
                         # check if tomcat is running
                         if [ -f "/var/run/tomcat7.pid" ]; then
-                          /etc/init.d/tomcat7 stop > /dev/null
+                          /etc/init.d/tomcat7 stop
                         fi
-                        /etc/init.d/tomcat7 start > /dev/null
-                        wget http://ceras.eso.yorku.ca/etavirp/tomcat/DatabaseOperations.war -O DatabaseOperations.war > /dev/null 2> errors.log
-                        apt-get install --assume-yes unzip > /dev/null 2> errors.log
-                        unzip DatabaseOperations.war -d DatabaseOperations > /dev/null
+                        /etc/init.d/tomcat7 start
+                        wget http://ceras.eso.yorku.ca/etavirp/tomcat/DatabaseOperations.war -O DatabaseOperations.war 2> errors.log
+                        apt-get install --assume-yes unzip 2> errors.log
+                        unzip DatabaseOperations.war -d DatabaseOperations
                         cp -rf DatabaseOperations /var/lib/tomcat7/webapps/
-                        chown -R tomcat6:tomcat7 /var/lib/tomcat6/webapps/DatabaseOperations
+                        chown -R tomcat7:tomcat7 /var/lib/tomcat7/webapps/DatabaseOperations
                         rm -rf DatabaseOperations*
                         
-                        /etc/init.d/tomcat7 stop > /dev/null
-                        iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080 > /dev/null
+                        /etc/init.d/tomcat7 stop
                         sed -e "s/url.*:3306/url=\"jdbc:mysql:\\/\\/$db_host:3306/" /etc/tomcat7/Catalina/localhost/DatabaseOperations.xml > tmp
-                        mv /etc/tomcat7/Catalina/localhost/DatabaseOperations.xml oldDB.xml > /dev/null 
-                        mv tmp /etc/tomcat7/Catalina/localhost/DatabaseOperations.xml > /dev/null
-                        cat /etc/tomcat6/Catalina/localhost/DatabaseOperations.xml > /dev/null
+                        mv /etc/tomcat7/Catalina/localhost/DatabaseOperations.xml oldDB.xml 
+                        mv tmp /etc/tomcat7/Catalina/localhost/DatabaseOperations.xml
+                        cat /etc/tomcat6/Catalina/localhost/DatabaseOperations.xml
                         sed -e "s/url.*:3306/url=\"jdbc:mysql:\\/\\/$db_host:3306/" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml > tmp
-                        mv /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml oldContext.xml > /dev/null 
-                        mv tmp /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml > /dev/null
-                        cat /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml > /dev/null
-                        /etc/init.d/tomcat7 start > /dev/null
+                        mv /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml oldContext.xml 
+                        mv tmp /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
+                        cat /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
+                        /etc/init.d/tomcat7 start
                   params:
                     $db_host:
                       get_attr: [db,first_address]
