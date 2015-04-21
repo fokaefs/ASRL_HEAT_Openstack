@@ -33,25 +33,15 @@ resources:
         str_replace:
           template: |
             #!/bin/bash -v
-            bash -c "DEBIAN_FRONTEND=noninteractive aptitude install -y mysql-server"  2> errors.log
-            mysql -uroot -e "UPDATE mysql.user SET Password=PASSWORD('$db_rootpassword') WHERE User='root'; FLUSH PRIVILEGES;" 2> errors.log
-            wget http://ceras.eso.yorku.ca/etavirp/mysql/mySqlScript.sql 2> errors.log
-            mysql -uroot -p$db_rootpassword < mySqlScript.sql 2> errors.log
-            rm -rf mySqlScript.sql 2> errors.log
-            # download the config file
-            wget http://ceras.eso.yorku.ca/etavirp/mysql/my.cnf -O my.cnf.bkp
-            # generate the new config file with the bind address replaced
-            while read LINE
-            do
-                    LINE=`eval echo $LINE`
-                    echo $LINE >> my.cnf
-            done < my.cnf.bkp
-            # remove the local backup
-            rm -f my.cnf.bkp
-            # do a backup for the file on the server
-            mv /etc/mysql/my.cnf /etc/mysql/my.cnf.bkp
-            # copy the configuration file to the right location
-            mv -f my.cnf /etc/mysql/my.cnf
+            apt-get update
+            apt-get install -y mysql-server
+            mysql -uroot -e "UPDATE mysql.user SET Password=PASSWORD('$db_rootpassword') WHERE User='root'; FLUSH PRIVILEGES;"
+            wget http://ceras.eso.yorku.ca/etavirp/mysql/mySqlScript.sql
+            mysql -uroot -p$db_rootpassword < mySqlScript.sql
+            rm -rf mySqlScript.sql
+            sed -i "s/bind-address            = 127.0.0.1/bind-address            = $db_host/g" /etc/mysql/my.cnf > tmp
+            mv tmp /etc/mysql/my.cnf
+            rm -f tmp
                     
             
           params:
@@ -59,6 +49,10 @@ resources:
               get_attr:
               - database_root_password
               - value
+            $db_host:
+              get_attr:
+              - db
+              - first_address
   asg:
     type: OS::Heat::AutoScalingGroup
     properties:
@@ -82,31 +76,12 @@ resources:
                         #!/bin/bash -v
                         apt-get update
                         apt-get install -y tomcat7
-                        #mv /usr/share/tomcat7/bin/catalina.sh /usr/share/tomcat7/bin/catalina.sh.bkp
-                        #wget http://ceras.eso.yorku.ca/etavirp/tomcat/catalina.sh -O /usr/share/tomcat7/bin/catalina.sh
-                        #chmod +x /usr/share/tomcat7/bin/catalina.sh
-                        # check if tomcat is running
-#                        if [ -f "/var/run/tomcat7.pid" ]; then
-#                          /etc/init.d/tomcat7 stop
-#                        fi
-#                        /etc/init.d/tomcat7 start
-#                        wget http://ceras.eso.yorku.ca/etavirp/tomcat/DatabaseOperations.war -O DatabaseOperations.war 2> errors.log
-#                        apt-get install --assume-yes unzip 2> errors.log
-#                        unzip DatabaseOperations.war -d DatabaseOperations
-#                        cp -rf DatabaseOperations /var/lib/tomcat7/webapps/
-#                        chown -R tomcat7:tomcat7 /var/lib/tomcat7/webapps/DatabaseOperations
-#                        rm -rf DatabaseOperations*
+                        wget http://ceras.eso.yorku.ca/etavirp/tomcat/DatabaseOperations.war -O /var/lib/tomcat7/webapps/DatabaseOperations.war
                         
-#                        /etc/init.d/tomcat7 stop
-#                        sed -e "s/url.*:3306/url=\"jdbc:mysql:\\/\\/$db_host:3306/" /etc/tomcat7/Catalina/localhost/DatabaseOperations.xml > tmp
-#                        mv /etc/tomcat7/Catalina/localhost/DatabaseOperations.xml oldDB.xml 
-#                        mv tmp /etc/tomcat7/Catalina/localhost/DatabaseOperations.xml
-#                        cat /etc/tomcat6/Catalina/localhost/DatabaseOperations.xml
-#                        sed -e "s/url.*:3306/url=\"jdbc:mysql:\\/\\/$db_host:3306/" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml > tmp
-#                        mv /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml oldContext.xml 
-#                        mv tmp /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
-#                        cat /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
-#                        /etc/init.d/tomcat7 start
+                        /etc/init.d/tomcat7 stop
+                        sed -e "s/url.*:3306/url=\"jdbc:mysql:\\/\\/$db_host:3306\\/SimpleDatabase/" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
+                        wget http://ceras.eso.yorku.ca/etavirp/tomcat/mysql-connector-java-5.1.10-bin.jar -O /var/lib/tomcat7/webapps/DatabaseOperations/WEB-INF/lib/mysql-connector-java-5.1.10-bin.jar
+                        /etc/init.d/tomcat7 start
                   params:
                     $db_host:
                       get_attr: [db,first_address]
