@@ -44,7 +44,7 @@ resources:
             echo $db_host
             wget http://ceras.eso.yorku.ca/etavirp/mysql/my.cnf -O /etc/mysql/my.cnf
             sed -i "/bind-address/c\bind-address = $db_host" /etc/mysql/my.cnf                    
-            
+            service mysql restart
           params:
             $db_rootpassword:
               get_attr:
@@ -79,7 +79,7 @@ resources:
                         
                         /etc/init.d/tomcat7 restart
                         sed -i "/password/c\password=\"$db_rootpassword\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
-                        sed -i "/url/c\url=\"jdbc:mysql:\\/\\/$db_host:3306\\/SimpleDatabase/\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
+                        sed -i "/url/c\url=\"jdbc:mysql:\\/\\/$db_host:3306\\/SimpleDatabase\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
                         wget http://ceras.eso.yorku.ca/etavirp/tomcat/mysql-connector-java-5.1.10-bin.jar -O /var/lib/tomcat7/webapps/DatabaseOperations/WEB-INF/lib/mysql-connector-java-5.1.10-bin.jar
                         
                   params:
