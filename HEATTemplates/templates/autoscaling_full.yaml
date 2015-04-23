@@ -40,7 +40,7 @@ resources:
             mysql -uroot -p$db_rootpassword < mySqlScript.sql
             rm -rf mySqlScript.sql
             db_host = $(curl http://169.254.169.254/openstack/latest/local-ipv4) 
-            echo db_host
+            echo $db_host
             sed -i "s/bind-address            = 127.0.0.1/bind-address            = $db_host/g" /etc/mysql/my.cnf > tmp.cnf
             mv tmp.cnf /etc/mysql/my.cnf
             rm -f tmp.cnf
