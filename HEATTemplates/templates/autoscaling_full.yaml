@@ -39,6 +39,7 @@ resources:
             wget http://ceras.eso.yorku.ca/etavirp/mysql/mySqlScript.sql
             mysql -uroot -p$db_rootpassword < mySqlScript.sql
             rm -rf mySqlScript.sql
+            db_host = $(curl http://169.254.169.254/openstack/latest/local-ipv4) 
             sed -i "s/bind-address            = 127.0.0.1/bind-address            = $db_host/g" /etc/mysql/my.cnf > tmp
             mv tmp /etc/mysql/my.cnf
             rm -f tmp
@@ -49,7 +50,7 @@ resources:
               get_attr:
               - database_root_password
               - value
-            $db_host: {get_attr: [db, networks, get_param: network, 0]}
+            #$db_host: {get_attr: [db, networks, get_param: network, 0]}
   asg:
     type: OS::Heat::AutoScalingGroup
     properties:
