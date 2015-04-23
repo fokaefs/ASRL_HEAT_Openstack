@@ -77,10 +77,15 @@ resources:
                         wget http://ceras.eso.yorku.ca/etavirp/tomcat/DatabaseOperations.war -O /var/lib/tomcat7/webapps/DatabaseOperations.war
                         
                         /etc/init.d/tomcat7 restart
-                        sed -e "s/url.*:3306/url=\"jdbc:mysql:\\/\\/$db_host:3306\\/SimpleDatabase/" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
+                        sed -i "/password/c\password=\"$db_rootpassword\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
+                        sed -i "/url/c\url=\"jdbc:mysql:\\/\\/$db_host:3306\\/SimpleDatabase/\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
                         wget http://ceras.eso.yorku.ca/etavirp/tomcat/mysql-connector-java-5.1.10-bin.jar -O /var/lib/tomcat7/webapps/DatabaseOperations/WEB-INF/lib/mysql-connector-java-5.1.10-bin.jar
                         
                   params:
+                    $db_rootpassword:
+                      get_attr:
+                      - database_root_password
+                      - value
                     $db_host:
                       get_attr: [db, networks, get_param: network, 0]
               user_data_format: RAW
