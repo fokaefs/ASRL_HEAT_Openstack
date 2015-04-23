@@ -33,24 +33,24 @@ resources:
         str_replace:
           template: |
             #!/bin/bash -v
-            apt-get update
-            apt-get install -y mysql-server
-            mysql -uroot -e "UPDATE mysql.user SET Password=PASSWORD('$db_rootpassword') WHERE User='root'; FLUSH PRIVILEGES;"
-            wget http://ceras.eso.yorku.ca/etavirp/mysql/mySqlScript.sql
-            mysql -uroot -p$db_rootpassword < mySqlScript.sql
-            rm -rf mySqlScript.sql
-            db_host = $(curl http://169.254.169.254/openstack/latest/local-ipv4) 
-            echo $db_host
-            sed -i "s/bind-address            = 127.0.0.1/bind-address            = $db_host/g" /etc/mysql/my.cnf > tmp.cnf
-            mv tmp.cnf /etc/mysql/my.cnf
-            rm -f tmp.cnf
-                    
-            
-          params:
-            $db_rootpassword:
-              get_attr:
-              - database_root_password
-              - value
+#            apt-get update
+#            apt-get install -y mysql-server
+#            mysql -uroot -e "UPDATE mysql.user SET Password=PASSWORD('$db_rootpassword') WHERE User='root'; FLUSH PRIVILEGES;"
+#            wget http://ceras.eso.yorku.ca/etavirp/mysql/mySqlScript.sql
+#            mysql -uroot -p$db_rootpassword < mySqlScript.sql
+#            rm -rf mySqlScript.sql
+#            db_host = $(curl http://169.254.169.254/openstack/latest/local-ipv4) 
+#            echo $db_host
+#            sed -i "s/bind-address            = 127.0.0.1/bind-address            = $db_host/g" /etc/mysql/my.cnf > tmp.cnf
+#            mv tmp.cnf /etc/mysql/my.cnf
+#            rm -f tmp.cnf
+#                    
+#            
+#          params:
+#            $db_rootpassword:
+#              get_attr:
+#              - database_root_password
+#              - value
             #$db_host: {get_attr: [db, networks, get_param: network, 0]}
   asg:
     type: OS::Heat::AutoScalingGroup
