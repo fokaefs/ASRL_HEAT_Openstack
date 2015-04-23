@@ -185,13 +185,13 @@ resources:
                 
                 service apache2 start
                 
-                wget http://hypatia.cs.ualberta.ca/~fokaefs/update.py -O /etc/apache2/update.py
+                #wget http://hypatia.cs.ualberta.ca/~fokaefs/update.py -O /etc/apache2/update.py
                 
                 # add a cron job to monitor the metadata and update haproxy
-                crontab -l >_crontab || true
-                echo "* * * * * curl -s http://169.254.169.254/openstack/latest/meta_data.json | python /etc/apache2/update.py | /usr/bin/logger -t apache2_update" >>_crontab
-                crontab <_crontab
-                rm _crontab
+                #crontab -l >_crontab || true
+                #echo "* * * * * curl -s http://169.254.169.254/openstack/latest/meta_data.json | python /etc/apache2/update.py | /usr/bin/logger -t apache2_update" >>_crontab
+                #crontab <_crontab
+                #rm _crontab
       user_data_format: RAW 
 outputs:
   load_balancer_ip:
