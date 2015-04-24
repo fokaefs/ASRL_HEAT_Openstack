@@ -185,7 +185,7 @@ resources:
                 
                 service apache2 start
                 
-                wget http://hypatia.cs.ualberta.ca/~fokaefs/update.py -O /etc/apache2/update.py
+                wget https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/update.py -O /etc/apache2/update.py
                 
                 # add a cron job to monitor the metadata and update haproxy
                 crontab -l >_crontab || true
