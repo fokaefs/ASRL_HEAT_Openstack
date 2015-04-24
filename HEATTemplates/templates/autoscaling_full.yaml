@@ -78,15 +78,15 @@ resources:
                         wget http://ceras.eso.yorku.ca/etavirp/tomcat/DatabaseOperations.war -O /var/lib/tomcat7/webapps/DatabaseOperations.war
                         
                         /etc/init.d/tomcat7 restart
-                        sed -i "/password/c\password=\"$db_rootpassword\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
+                        sed -i "/password/c\password=\"root\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
                         sed -i "/url/c\url=\"jdbc:mysql:\\/\\/$db_host:3306\\/SimpleDatabase\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
                         wget http://ceras.eso.yorku.ca/etavirp/tomcat/mysql-connector-java-5.1.10-bin.jar -O /var/lib/tomcat7/webapps/DatabaseOperations/WEB-INF/lib/mysql-connector-java-5.1.10-bin.jar
                         
                   params:
-                    $db_rootpassword:
-                      get_attr:
-                      - database_root_password
-                      - value
+#                    $db_rootpassword:
+#                      get_attr:
+#                      - database_root_password
+#                      - value
                     $db_host:
                       get_attr: [db, networks, get_param: network, 0]
               user_data_format: RAW
@@ -185,13 +185,13 @@ resources:
                 
                 service apache2 start
                 
-                #wget http://hypatia.cs.ualberta.ca/~fokaefs/update.py -O /etc/apache2/update.py
+                wget http://hypatia.cs.ualberta.ca/~fokaefs/update.py -O /etc/apache2/update.py
                 
                 # add a cron job to monitor the metadata and update haproxy
-                #crontab -l >_crontab || true
-                #echo "* * * * * curl -s http://169.254.169.254/openstack/latest/meta_data.json | python /etc/apache2/update.py | /usr/bin/logger -t apache2_update" >>_crontab
-                #crontab <_crontab
-                #rm _crontab
+                crontab -l >_crontab || true
+                echo "* * * * * curl -s http://169.254.169.254/openstack/latest/meta_data.json | python /etc/apache2/update.py | /usr/bin/logger -t apache2_update" >>_crontab
+                crontab <_crontab
+                rm _crontab
       user_data_format: RAW 
 outputs:
   load_balancer_ip:
