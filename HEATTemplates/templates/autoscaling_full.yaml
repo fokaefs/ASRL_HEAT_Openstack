@@ -65,6 +65,7 @@ resources:
                 get_param: image
               key_name:
                 get_param: key
+              config_drive: true
               metadata:
                 metering.stack:
                   get_param: OS::stack_id
@@ -152,6 +153,7 @@ resources:
       metadata:
         servers:
           get_attr: [asg, outputs_list, first_address]
+      config_drive: true
       networks:
       - network:
           get_param: network
