@@ -109,12 +109,12 @@ resources:
   cpu_alarm_high:
     type: OS::Ceilometer::Alarm
     properties:
-      description: Scale-up if the average CPU > 80% for 1 minute
+      description: Scale-up if the average CPU > 60% for 1 minute
       meter_name: cpu_util
       statistic: avg
       period: 60
       evaluation_periods: 1
-      threshold: 80
+      threshold: 60
       alarm_actions:
       - get_attr:
         - web_server_scaleup_policy
@@ -126,12 +126,12 @@ resources:
   cpu_alarm_low:
     type: OS::Ceilometer::Alarm
     properties:
-      description: Scale-down if the average CPU < 40% for 10 minutes
+      description: Scale-down if the average CPU < 10% for 10 minutes
       meter_name: cpu_util
       statistic: avg
       period: 600
       evaluation_periods: 1
-      threshold: 40
+      threshold: 10
       alarm_actions:
       - get_attr:
         - web_server_scaledown_policy
