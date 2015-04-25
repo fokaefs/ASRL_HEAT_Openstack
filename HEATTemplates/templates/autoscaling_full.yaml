@@ -28,6 +28,7 @@ resources:
         get_param: image
       key_name:
         get_param: key
+      config_drive: true
       user_data_format: RAW
       user_data:
         str_replace:
@@ -152,7 +153,7 @@ resources:
         get_param: key
       metadata:
         servers:
-          get_attr: [asg, outputs_list, first_address]
+          get_attr: [asg, outputs_list, networks, get_param: network, 0]
       config_drive: true
       networks:
       - network:
