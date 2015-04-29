@@ -16,7 +16,7 @@ ProxyPass /balancer-manager !
 ProxyPass / balancer://Valhalla_Cluster/
 <Proxy balancer://Valhalla_Cluster>
 """)
-for i, server in enumerate(new_servers):
+for i, index, server in enumerate(new_servers):
     f.write(' BalancerMember http://{0}:80/\n'.format(server))
 f.write("""
 </Proxy>
