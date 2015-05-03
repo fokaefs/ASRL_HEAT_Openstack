@@ -19,7 +19,6 @@ parameters:
   cluster_size:
     type: number
     description: Number of worker nodes
-    default: 1
 resources:
   database_root_password:
     type: OS::Heat::RandomString
@@ -139,9 +138,23 @@ resources:
 #      evaluation_periods: 1
 #      threshold: 10
 #      alarm_actions:
-#      - get_attr:
-#        - web_server_scaledown_policy
-#        - alarm_url
+#        str_replace: |
+#          template: http://132.206.206.136:5000/scale?project_id=$project_id&stack_name=$stack_name&stack_id=$stack_id&template_url=$template_url&parameters=$parameters&adjustment=-1
+#          params:
+#            $project_id: { get_param: OS::project_id }
+#            $stack_name: { get_param: OS::stack_name }
+#            $stack_id: { get_param: OS::stack_id }
+#            $template_url: https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/manual_scaling_full.yaml
+#            $parameters:
+#              str_replace:
+#                template "{ "image":"$image", "key":"$key", "flavor":"$flavor", "database_flavor":"$database_flavor", "network":"$network", "cluster_size":"$cluster_size" }"
+#                params:
+#                  $image: {get_param: image }
+#                  $key: {get_param: key }
+#                  $flavor: {get_param: flavor }
+#                  $database_flavor: {get_param: database_flavor }
+#                  $network: {get_param: network }
+#                  $cluster_size: {get_param: cluster_size } 
 #      matching_metadata:
 #        metadata.user_metadata.stack:
 #          get_param: OS::stack_id
@@ -242,5 +255,5 @@ outputs:
 #        params:
 #          stackval:
 #            get_param: OS::stack_id
-    description: |
-      This is a Ceilometer query for statistics on the cpu_util meter Samples about OS::Nova::Server instances in this stack.  The parameter selects Samples according to the subject's metadata. When a VM's metadata includes an item of the form metering.X=Y, the corresponding Ceilometer resource has a metadata item of the form user_metadata.X=Y and samples about resources so tagged can be queried with a Ceilometer query term of the form metadata.user_metadata.X=Y.  In this case the nested stacks give their VMs metadata that is passed as a nested stack parameter, and this stack passes a metadata of the form metering.stack=Y, where Y is this stack's ID.
+#    description: |
+#      This is a Ceilometer query for statistics on the cpu_util meter Samples about OS::Nova::Server instances in this stack.  The parameter selects Samples according to the subject's metadata. When a VM's metadata includes an item of the form metering.X=Y, the corresponding Ceilometer resource has a metadata item of the form user_metadata.X=Y and samples about resources so tagged can be queried with a Ceilometer query term of the form metadata.user_metadata.X=Y.  In this case the nested stacks give their VMs metadata that is passed as a nested stack parameter, and this stack passes a metadata of the form metering.stack=Y, where Y is this stack's ID.
