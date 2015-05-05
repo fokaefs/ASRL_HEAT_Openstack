@@ -54,4 +54,4 @@ if __name__ == '__main__':
     update.update_haproxy()
     start_timer_thread()
 
-    app.run()
+    app.run(host='0.0.0.0')
