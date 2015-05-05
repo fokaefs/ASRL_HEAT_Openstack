@@ -182,6 +182,7 @@ resources:
 
                 # create a heart beat user to run the server process
                 #adduser --disabled-password --gecos "" heartbeat
+                mkdir /home/heartbeat
                 
                 # install the heartbeat application
                 cd /home/heartbeat
