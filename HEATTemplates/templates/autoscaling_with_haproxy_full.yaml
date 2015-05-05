@@ -181,7 +181,7 @@ resources:
                 EOF
 
                 # create a heart beat user to run the server process
-                adduser --disabled-password --gecos "" heartbeat
+                #adduser --disabled-password --gecos "" heartbeat
                 
                 # install the heartbeat application
                 cd /home/heartbeat
@@ -193,7 +193,7 @@ resources:
                 venv/bin/pip install flask gunicorn==18.0
                 
                 # make the heartbeat user the owner of the application
-                chown -R heartbeat:heartbeat heartbeat.py
+                #chown -R heartbeat:heartbeat heartbeat.py
                 
                 # configure supervisor to run a private gunicorn web server, and
                 # to autostart it on boot and when it crashes
