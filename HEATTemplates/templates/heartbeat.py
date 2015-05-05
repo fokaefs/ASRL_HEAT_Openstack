@@ -1,6 +1,9 @@
+#!flask/bin/python
 from flask import Flask, request
 import json
 import haproxy_update
+import time
+import os
 
 app = Flask(__name__)
 
@@ -20,6 +23,8 @@ def write_json_servers_file():
     s = []
     for srv in servers:
         s.append(srv)
+    print(s)
+    print(open(servers_file, 'r'))
     open(servers_file, 'wt').write(json.dumps(s))
 
 
@@ -27,16 +32,18 @@ def write_json_servers_file():
 @app.route('/', methods=['GET','POST'])
 def hello_world():
     worker_ip = request.remote_addr
+    print(worker_ip)
     if worker_ip not in servers:
-        write_json_server_file()
-        update.update_haproxy()
+        servers[worker_ip]=SECONDS_TO_EXPIRE
+        write_json_servers_file()
+        haproxy_update.update_haproxy()
     servers[worker_ip]=SECONDS_TO_EXPIRE
 
     return 'Hello World!'
 
 def timer_thread_func():
     while True:
-        sleep(1)
+        time.sleep(1)
         remove_server = []
         for server in servers:
             if servers[server] > 0:
@@ -46,12 +53,10 @@ def timer_thread_func():
         for srv in remove_server:
             servers.pop(srv)
         if len(remove_server) > 0:
-            write_servers_to_file()
-            update.update_haproxy()
+            write_json_servers_file()
+            haproxy_update.update_haproxy()
 
 if __name__ == '__main__':
-    read_servers_json_file()
-    update.update_haproxy()
-    start_timer_thread()
-
+    os.spawnl(os.P_NOWAIT, 'timer_thread_func()')
+    app.debug = True
     app.run(host='0.0.0.0')

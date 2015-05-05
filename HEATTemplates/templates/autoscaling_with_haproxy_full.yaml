@@ -163,7 +163,9 @@ resources:
       networks:
       - network:
           get_param: network
-      user_data: |            
+      user_data:
+        str_replace:
+          template: |            
                 #!/bin/bash -ex
                 # install dependencies
                 apt-get update
@@ -177,7 +179,7 @@ resources:
 
                 # write an initial empty list of worker servers
                 cat >>/etc/haproxy/servers.json <<EOF
-                []
+                [$worker_ip]
                 EOF
 
                 # create a heart beat user to run the server process
@@ -231,6 +233,9 @@ resources:
                 rm -f /etc/nginx/sites-enabled/default
                 ln -s /etc/nginx/sites-available/heartbeat /etc/nginx/sites-enabled/
                 service nginx restart
+          params:
+            $worker_ip:
+              get_attr: [asg, outputs_list, networks, get_param: network, 0]
       user_data_format: RAW 
 outputs:
   load_balancer_ip:
