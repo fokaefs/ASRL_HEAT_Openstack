@@ -163,9 +163,7 @@ resources:
       networks:
       - network:
           get_param: network
-      user_data:
-        str_replace:
-          template: |            
+      user_data: |            
                 #!/bin/bash -ex
                 # install dependencies
                 apt-get update
