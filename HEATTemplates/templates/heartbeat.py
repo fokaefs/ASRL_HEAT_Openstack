@@ -31,6 +31,7 @@ def write_json_servers_file():
 
 @app.route('/', methods=['GET','POST'])
 def hello_world():
+    global servers
     worker_ip = request.remote_addr
     print(worker_ip)
     if worker_ip not in servers:

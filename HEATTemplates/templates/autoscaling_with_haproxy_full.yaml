@@ -171,6 +171,11 @@ resources:
 
                 #configure haproxy
                 sed -i 's/ENABLED=0/ENABLED=1/' /etc/default/haproxy
+                
+                echo "listen stats *:1936
+                        stats enable
+                        stats uri /
+                        stats hide-version" >>/etc/haproxy/haproxy.cfg
 
                 # save haproxy original configuration
                 cp /etc/haproxy/haproxy.cfg /etc/haproxy/haproxy_base.cfg
@@ -179,11 +184,6 @@ resources:
                 cat >>/etc/haproxy/servers.json <<EOF
                 []
                 EOF
-                
-                echo "listen stats *:1936
-                        stats enable
-                        stats uri /
-                        stats hide-version" >>/etc/haproxy/haproxy.cfg
                 
                 service haproxy restart
 
