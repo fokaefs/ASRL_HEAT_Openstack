@@ -8,7 +8,7 @@ import os
 app = Flask(__name__)
 
 
-SECONDS_TO_EXPIRE=60
+SECONDS_TO_EXPIRE=120
 servers_file='/etc/haproxy/servers.json'
 servers={}
 
@@ -16,7 +16,7 @@ def read_servers_json_file():
     global servers
     s = json.loads(open(servers_file).read())
     for srv in s:
-        servers[srv] = SECONDS_TO_EXPIRE * 3
+        servers[srv] = SECONDS_TO_EXPIRE
 
 def write_json_servers_file():
     global servers
@@ -43,6 +43,7 @@ def hello_world():
     return 'Hello World!'
 
 def timer_thread_func():
+    global servers
     while True:
         time.sleep(1)
         remove_server = []

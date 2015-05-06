@@ -17,7 +17,7 @@ def update_haproxy():
         option forwardfor
         """)
     for i, server in enumerate(current_servers ):
-        f.write('server server-{0} {1}:{2}\n'.format(i, server, 80))
+        f.write('server server-{0} {1}:{2}\n        '.format(i, server, 80))
     f.close()
     # reload haproxy's configuration
     print('Reloading haproxy with servers: ' + ', '.join(current_servers))
