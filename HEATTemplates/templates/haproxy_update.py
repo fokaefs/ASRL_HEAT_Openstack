@@ -9,8 +9,7 @@ def update_haproxy():
     # generate a new haproxy config file
     f = open('/etc/haproxy/haproxy.cfg', 'wt')
     f.write(open('/etc/haproxy/haproxy_base.cfg').read())
-    f.write("""
-        listen app *:80
+    f.write("""listen app *:80
         mode http
         balance roundrobin
        #option httpchk HEAD / HTTP/1.0
@@ -18,7 +17,7 @@ def update_haproxy():
         option forwardfor
         """)
     for i, server in enumerate(current_servers ):
-        f.write('    server server-{0} {1}:{2}\n'.format(i, server, 80))
+        f.write('server server-{0} {1}:{2}\n'.format(i, server, 80))
     f.close()
     # reload haproxy's configuration
     print('Reloading haproxy with servers: ' + ', '.join(current_servers))

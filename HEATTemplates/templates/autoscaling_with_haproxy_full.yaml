@@ -84,7 +84,7 @@ resources:
                         sed -i "/url/c\url=\"jdbc:mysql:\\/\\/$db_host:3306\\/SimpleDatabase\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
                         wget http://ceras.eso.yorku.ca/etavirp/tomcat/mysql-connector-java-5.1.10-bin.jar -O /var/lib/tomcat7/webapps/DatabaseOperations/WEB-INF/lib/mysql-connector-java-5.1.10-bin.jar
                         
-                        echo "* * * * * curl -X POST http://$load_balancer_ip" >>_crontab
+                        echo "* * * * * curl -X POST http://$load_balancer_ip:81" >>_crontab
                         crontab <_crontab
                         
                   params:
@@ -179,6 +179,13 @@ resources:
                 cat >>/etc/haproxy/servers.json <<EOF
                 []
                 EOF
+                
+                echo "listen stats *:1936
+                        stats enable
+                        stats uri /
+                        stats hide-version" >>/etc/haproxy/haproxy.cfg
+                
+                service haproxy start
 
                 # create a heart beat user to run the server process
                 #adduser --disabled-password --gecos "" heartbeat
@@ -216,7 +223,7 @@ resources:
                 # rule to the gunicorn server
                 cat >/etc/nginx/sites-available/heartbeat<<EOF
                 server {
-                    listen 80;
+                    listen 81;
                     server_name _;
                     access_log /var/log/nginx/tiny.access.log;
                     error_log /var/log/nginx/tiny.error.log;
