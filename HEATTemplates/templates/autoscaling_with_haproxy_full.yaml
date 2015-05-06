@@ -185,7 +185,7 @@ resources:
                         stats uri /
                         stats hide-version" >>/etc/haproxy/haproxy.cfg
                 
-                service haproxy start
+                service haproxy restart
 
                 # create a heart beat user to run the server process
                 #adduser --disabled-password --gecos "" heartbeat
