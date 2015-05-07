@@ -1,4 +1,4 @@
-heat_template_version: 2014-10-16T00:00:00Z
+heat_template_version: 2014-10-16
 description: AutoScaling Hogna Topology
 parameters:
   image:
