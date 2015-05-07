@@ -115,7 +115,7 @@ resources:
             $template_url: https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/manual_scaling_full.yaml
             $parameters:
               str_replace:
-                template: { 'image': '$image', 'key': '$key', 'flavor': '$flavor', 'database_flavor': '$database_flavor', 'network': '$network', 'cluster_size': '$cluster_size' }
+                template: "{ 'image': '$image', 'key': '$key', 'flavor': '$flavor', 'database_flavor': '$database_flavor', 'network': '$network', 'cluster_size': '$cluster_size' }"
                 params:
                   $image: 
                     get_param: image
@@ -156,7 +156,7 @@ resources:
             $template_url: https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/manual_scaling_full.yaml
             $parameters:
               str_replace:
-                template: { 'image': '$image', 'key': '$key', 'flavor': '$flavor', 'database_flavor': '$database_flavor', 'network': '$network', 'cluster_size': '$cluster_size' }
+                template: "{ 'image': '$image', 'key': '$key', 'flavor': '$flavor', 'database_flavor': '$database_flavor', 'network': '$network', 'cluster_size': '$cluster_size' }"
                 params:
                   $image: 
                     get_param: image
