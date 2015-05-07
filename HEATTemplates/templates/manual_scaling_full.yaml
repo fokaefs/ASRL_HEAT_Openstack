@@ -1,4 +1,4 @@
-heat_template_version: 2014-10-16
+heat_template_version: 2014-10-16T00:00:00Z
 description: AutoScaling Hogna Topology
 parameters:
   image:
@@ -39,82 +39,59 @@ resources:
       user_data_format: RAW
       user_data:
         str_replace:
-          template: |
-            #!/bin/bash -v
-            apt-get update
-            debconf-set-selections <<< "mysql-server mysql-server/root_password password $db_rootpassword"
-            debconf-set-selections <<< "mysql-server mysql-server/root_password_again password $db_rootpassword"
-            apt-get install -y mysql-server
-            wget https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/mySqlScript.sql
-            mysql -uroot -p$db_rootpassword < mySqlScript.sql
-            rm -rf mySqlScript.sql
-            db_host=$(curl http://169.254.169.254/latest/meta-data/local-ipv4) 
-            echo $db_host
-            wget http://ceras.eso.yorku.ca/etavirp/mysql/my.cnf -O /etc/mysql/my.cnf
-            sed -i "/bind-address/c\bind-address = $db_host" /etc/mysql/my.cnf                    
-            service mysql restart
+          template: "#!/bin/bash -v\napt-get update\ndebconf-set-selections <<< \"\
+            mysql-server mysql-server/root_password password $db_rootpassword\"\n\
+            debconf-set-selections <<< \"mysql-server mysql-server/root_password_again\
+            \ password $db_rootpassword\"\napt-get install -y mysql-server\nwget https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/mySqlScript.sql\n\
+            mysql -uroot -p$db_rootpassword < mySqlScript.sql\nrm -rf mySqlScript.sql\n\
+            db_host=$(curl http://169.254.169.254/latest/meta-data/local-ipv4) \n\
+            echo $db_host\nwget http://ceras.eso.yorku.ca/etavirp/mysql/my.cnf -O\
+            \ /etc/mysql/my.cnf\nsed -i \"/bind-address/c\\bind-address = $db_host\"\
+            \ /etc/mysql/my.cnf                    \nservice mysql restart\n"
           params:
             $db_rootpassword:
               get_attr:
               - database_root_password
               - value
-            #$db_host: {get_attr: [db, networks, get_param: network, 0]}
   worker_group:
     type: OS::Heat::ResourceGroup
     properties:
       count:
         get_param: cluster_size
       resource_def:
-            type: OS::Nova::Server
-            properties:
-              flavor:
-                 get_param: flavor
-              image:
-                get_param: image
-              key_name:
-                get_param: key
-              config_drive: true
-              metadata:
-                metering.stack:
-                  get_param: OS::stack_id
-              user_data:
-                str_replace:
-                  template: |
-                        #!/bin/bash -v
-                        apt-get update
-                        apt-get install -y tomcat7
-                        iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
-                        wget http://ceras.eso.yorku.ca/etavirp/tomcat/DatabaseOperations.war -O /var/lib/tomcat7/webapps/DatabaseOperations.war
-                        
-                        /etc/init.d/tomcat7 restart
-                        sed -i "/password/c\password=\"root\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
-                        sed -i "/url/c\url=\"jdbc:mysql:\\/\\/$db_host:3306\\/SimpleDatabase\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
-                        wget http://ceras.eso.yorku.ca/etavirp/tomcat/mysql-connector-java-5.1.10-bin.jar -O /var/lib/tomcat7/webapps/DatabaseOperations/WEB-INF/lib/mysql-connector-java-5.1.10-bin.jar
-                        
-                  params:
-#                    $db_rootpassword:
-#                      get_attr:
-#                      - database_root_password
-#                      - value
-                    $db_host:
-                      get_attr: [db, networks, get_param: network, 0]
-              user_data_format: RAW
-#  web_server_scaleup_policy:
-#    type: OS::Heat::ScalingPolicy
-#    properties:
-#      adjustment_type: change_in_capacity
-#      auto_scaling_group_id:
-#        get_resource: asg
-#      cooldown: 60
-#      scaling_adjustment: 1
-#  web_server_scaledown_policy:
-#    type: OS::Heat::ScalingPolicy
-#    properties:
-#      adjustment_type: change_in_capacity
-#      auto_scaling_group_id:
-#        get_resource: asg
-#      cooldown: 60
-#      scaling_adjustment: -1
+        type: OS::Nova::Server
+        properties:
+          flavor:
+            get_param: flavor
+          image:
+            get_param: image
+          key_name:
+            get_param: key
+          config_drive: true
+          metadata:
+            metering.stack:
+              get_param: OS::stack_id
+          user_data:
+            str_replace:
+              template: |
+                #!/bin/bash -v
+                apt-get update
+                apt-get install -y tomcat7
+                iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+                wget http://ceras.eso.yorku.ca/etavirp/tomcat/DatabaseOperations.war -O /var/lib/tomcat7/webapps/DatabaseOperations.war
+
+                /etc/init.d/tomcat7 restart
+                sed -i "/password/c\password=\"root\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
+                sed -i "/url/c\url=\"jdbc:mysql:\\/\\/$db_host:3306\\/SimpleDatabase\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
+                wget http://ceras.eso.yorku.ca/etavirp/tomcat/mysql-connector-java-5.1.10-bin.jar -O /var/lib/tomcat7/webapps/DatabaseOperations/WEB-INF/lib/mysql-connector-java-5.1.10-bin.jar
+              params:
+                $db_host:
+                  get_attr:
+                  - db
+                  - networks
+                  - get_param: network
+                  - 0
+          user_data_format: RAW
   cpu_alarm_high:
     type: OS::Ceilometer::Alarm
     properties:
@@ -124,25 +101,34 @@ resources:
       period: 60
       evaluation_periods: 1
       threshold: 60
-#      alarm_actions:
-#        str_replace: |
-#          template: http://142.150.208.240:5000/scale?project_id=$project_id&stack_name=$stack_name&stack_id=$stack_id&template_url=$template_url&parameters=$parameters&adjustment=1&min_cluster_size=$min_cluster_size
-#          params:
-#            $project_id: { get_param: OS::project_id }
-#            $stack_name: { get_param: OS::stack_name }
-#            $stack_id: { get_param: OS::stack_id }
-#            $min_cluster_size: { get_param: min_cluster_size }
-#            $template_url: https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/manual_scaling_full.yaml
-#            $parameters:
-#              str_replace:
-#                template "{ "image":"$image", "key":"$key", "flavor":"$flavor", "database_flavor":"$database_flavor", "network":"$network", "cluster_size":"$cluster_size" }"
-#                params:
-#                  $image: {get_param: image }
-#                  $key: {get_param: key }
-#                  $flavor: {get_param: flavor }
-#                  $database_flavor: {get_param: database_flavor }
-#                  $network: {get_param: network }
-#                  $cluster_size: {get_param: cluster_size }
+      alarm_actions:
+        str_replace:  
+          template: http://142.150.208.240:5000/scale?project_id=$project_id&stack_name=$stack_name&stack_id=$stack_id&min_cluster_size=$min_cluster_size&template_url=$template_url&parameters=$parameters&adjustment=1
+          params:
+            $project_id: ca07deedf3864058a8e62797d1711733
+            $stack_name:
+              get_param: OS::stack_name
+            $stack_id: 
+              get_param: OS::stack_id
+            $min_cluster_size: 
+              get_param: min_cluster_size
+            $template_url: https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/manual_scaling_full.yaml
+            $parameters:
+              str_replace:
+                template: { 'image': '$image', 'key': '$key', 'flavor': '$flavor', 'database_flavor': '$database_flavor', 'network': '$network', 'cluster_size': '$cluster_size' }
+                params:
+                  $image: 
+                    get_param: image
+                  $key: 
+                    get_param: key
+                  $flavor: 
+                    get_param: flavor
+                  $database_flavor: 
+                    get_param: database_flavor
+                  $network: 
+                    get_param: network
+                  $cluster_size: 
+                    get_param: cluster_size
       matching_metadata:
         metadata.user_metadata.stack:
           get_param: OS::stack_id
@@ -156,25 +142,34 @@ resources:
       period: 60
       evaluation_periods: 1
       threshold: 10
-#      alarm_actions:
-#        str_replace: |
-#          template: http://142.150.208.240:5000/scale?project_id=$project_id&stack_name=$stack_name&stack_id=$stack_id&template_url=$template_url&parameters=$parameters&adjustment=-1&min_cluster_size=$min_cluster_size
-#          params:
-#            $project_id: { get_param: OS::project_id }
-#            $stack_name: { get_param: OS::stack_name }
-#            $stack_id: { get_param: OS::stack_id }
-#            $min_cluster_size: { get_param: min_cluster_size }
-#            $template_url: https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/manual_scaling_full.yaml
-#            $parameters:
-#              str_replace:
-#                template "{ "image":"$image", "key":"$key", "flavor":"$flavor", "database_flavor":"$database_flavor", "network":"$network", "cluster_size":"$cluster_size" }"
-#                params:
-#                  $image: {get_param: image }
-#                  $key: {get_param: key }
-#                  $flavor: {get_param: flavor }
-#                  $database_flavor: {get_param: database_flavor }
-#                  $network: {get_param: network }
-#                  $cluster_size: {get_param: cluster_size } 
+      alarm_actions:
+        str_replace:  
+          template: http://142.150.208.240:5000/scale?project_id=$project_id&stack_name=$stack_name&stack_id=$stack_id&min_cluster_size=$min_cluster_size&template_url=$template_url&parameters=$parameters&adjustment=-1
+          params:
+            $project_id: ca07deedf3864058a8e62797d1711733
+            $stack_name:
+              get_param: OS::stack_name
+            $stack_id: 
+              get_param: OS::stack_id
+            $min_cluster_size: 
+              get_param: min_cluster_size
+            $template_url: https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/manual_scaling_full.yaml
+            $parameters:
+              str_replace:
+                template: { 'image': '$image', 'key': '$key', 'flavor': '$flavor', 'database_flavor': '$database_flavor', 'network': '$network', 'cluster_size': '$cluster_size' }
+                params:
+                  $image: 
+                    get_param: image
+                  $key: 
+                    get_param: key
+                  $flavor: 
+                    get_param: flavor
+                  $database_flavor: 
+                    get_param: database_flavor
+                  $network: 
+                    get_param: network
+                  $cluster_size: 
+                    get_param: cluster_size
       matching_metadata:
         metadata.user_metadata.stack:
           get_param: OS::stack_id
@@ -190,100 +185,116 @@ resources:
         get_param: key
       metadata:
         servers:
-          get_attr: [worker_group, attributes, networks, get_param: network, 0]
+          get_attr:
+          - worker_group
+          - attributes
+          - networks
+          - get_param: network
+          - 0
       config_drive: true
       networks:
       - network:
           get_param: network
-      user_data: |            
-                #!/bin/bash -v
-                
-                # install dependencies
-                sudo apt-get update
-                sudo apt-get -y install apache2 python
-                
-                cp /etc/apache2/mods-available/proxy.conf /etc/apache2/mods-available/proxy_bkp.conf
-                cp /etc/apache2/mods-available/proxy_balancer.conf /etc/apache2/mods-available/proxy_balancer_bkp.conf
-                
-                echo "<IfModule mod_proxy.c>
-                ProxyRequests Off
+      user_data: |
+        #!/bin/bash -v
 
-                <Proxy *>
-                  AddDefaultCharset off
-                  Order deny,allow
-                  Allow from all
-                </Proxy>
-                ProxyVia On
-                </IfModule>" | tee /etc/apache2/mods-available/proxy.conf
+        # install dependencies
+        sudo apt-get update
+        sudo apt-get -y install apache2 python
+
+        cp /etc/apache2/mods-available/proxy.conf /etc/apache2/mods-available/proxy_bkp.conf
+        cp /etc/apache2/mods-available/proxy_balancer.conf /etc/apache2/mods-available/proxy_balancer_bkp.conf
+
+        echo "<IfModule mod_proxy.c>
+        ProxyRequests Off
+
+        <Proxy *>
+          AddDefaultCharset off
+          Order deny,allow
+          Allow from all
+        </Proxy>
+        ProxyVia On
+        </IfModule>" | tee /etc/apache2/mods-available/proxy.conf
 
 
-                a2enmod proxy
-                a2enmod proxy_balancer
-                a2enmod proxy_http
-                a2enmod proxy_ajp
-                a2enmod proxy_connect
-                
-                service apache2 start
-                
-                wget https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/update.py -O /etc/apache2/update.py
-                
-                # add a cron job to monitor the metadata and update haproxy
-                crontab -l >_crontab || true
-                echo "* * * * * curl -s http://169.254.169.254/openstack/latest/meta_data.json | python /etc/apache2/update.py | /usr/bin/logger -t apache2_update" >>_crontab
-                crontab <_crontab
-                rm _crontab
-      user_data_format: RAW 
+        a2enmod proxy
+        a2enmod proxy_balancer
+        a2enmod proxy_http
+        a2enmod proxy_ajp
+        a2enmod proxy_connect
+
+        service apache2 start
+
+        wget https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/update.py -O /etc/apache2/update.py
+
+        # add a cron job to monitor the metadata and update haproxy
+        crontab -l >_crontab || true
+        echo "* * * * * curl -s http://169.254.169.254/openstack/latest/meta_data.json | python /etc/apache2/update.py | /usr/bin/logger -t apache2_update" >>_crontab
+        crontab <_crontab
+        rm _crontab
+      user_data_format: RAW
 outputs:
   load_balancer_ip:
     description: The private IP address of the load balancer.
-    value: { get_attr: [lb, networks, get_param: network, 0]}
+    value:
+      get_attr:
+      - lb
+      - networks
+      - get_param: network
+      - 0
   server_ips:
     description: The public IP address of the newly configured Server.
-    value: { get_attr: [worker_group, attributes, networks, get_param: network, 0] }
-  scale_up_url:
-    description: |
-      This URL is the webhook to scale up the autoscaling group.  You can invoke the scale-up operation by doing an HTTP POST to this URL; no body nor extra headers are needed.
     value:
-      str_replace: |
-          template: http://142.150.208.240:5000/scale?project_id=$project_id&stack_name=$stack_name&stack_id=$stack_id&template_url=$template_url&parameters=$parameters&adjustment=1&min_cluster_size=$min_cluster_size
-          params:
-            $project_id: { get_param: OS::project_id }
-            $stack_name: { get_param: OS::stack_name }
-            $stack_id: { get_param: OS::stack_id }
-            $min_cluster_size: { get_param: min_cluster_size }
-            $template_url: https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/manual_scaling_full.yaml
-            $parameters:
-              str_replace:
-                template "{ "image":"$image", "key":"$key", "flavor":"$flavor", "database_flavor":"$database_flavor", "network":"$network", "cluster_size":"$cluster_size" }"
-                params:
-                  $image: {get_param: image }
-                  $key: {get_param: key }
-                  $flavor: {get_param: flavor }
-                  $database_flavor: {get_param: database_flavor }
-                  $network: {get_param: network }
-                  $cluster_size: {get_param: cluster_size }
-  scale_dn_url:
-    description: |
-      This URL is the webhook to scale down the autoscaling group. You can invoke the scale-down operation by doing an HTTP POST to this URL; no body nor extra headers are needed.
-    value:
-      str_replace: |
-          template: http://142.150.208.240:5000/scale?project_id=$project_id&stack_name=$stack_name&stack_id=$stack_id&template_url=$template_url&parameters=$parameters&adjustment=-1&min_cluster_size=$min_cluster_size
-          params:
-            $project_id: { get_param: OS::project_id }
-            $stack_name: { get_param: OS::stack_name }
-            $stack_id: { get_param: OS::stack_id }
-            $min_cluster_size: { get_param: min_cluster_size }
-            $template_url: https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/manual_scaling_full.yaml
-            $parameters:
-              str_replace:
-                template "{ "image":"$image", "key":"$key", "flavor":"$flavor", "database_flavor":"$database_flavor", "network":"$network", "cluster_size":"$cluster_size" }"
-                params:
-                  $image: {get_param: image }
-                  $key: {get_param: key }
-                  $flavor: {get_param: flavor }
-                  $database_flavor: {get_param: database_flavor }
-                  $network: {get_param: network }
-                  $cluster_size: {get_param: cluster_size }
+      get_attr:
+      - worker_group
+      - attributes
+      - networks
+      - get_param: network
+      - 0
+#  scale_up_url:
+#    description: |
+#      This URL is the webhook to scale up the autoscaling group.  You can invoke the scale-up operation by doing an HTTP POST to this URL; no body nor extra headers are needed.
+#    value:
+#      str_replace: |
+#        template: http://142.150.208.240:5000/scale?project_id=$project_id&stack_name=$stack_name&stack_id=$stack_id&template_url=$template_url&parameters=$parameters&adjustment=1&min_cluster_size=$min_cluster_size
+#        params:
+#          $project_id: { get_param: OS::project_id }
+#          $stack_name: { get_param: OS::stack_name }
+#          $stack_id: { get_param: OS::stack_id }
+#          $min_cluster_size: { get_param: min_cluster_size }
+#          $template_url: https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/manual_scaling_full.yaml
+#          $parameters:
+#            str_replace: |
+#              template: { 'image': '$image', 'key': '$key', 'flavor': '$flavor', 'database_flavor': '$database_flavor', 'network': '$network', 'cluster_size': '$cluster_size' }
+#              params:
+#                $image: {get_param: image }
+#                $key: {get_param: key }
+#                $flavor: {get_param: flavor }
+#                $database_flavor: {get_param: database_flavor }
+#                $network: {get_param: network }
+#                $cluster_size: {get_param: cluster_size }
+#  scale_dn_url:
+#    description: |
+#      This URL is the webhook to scale down the autoscaling group. You can invoke the scale-down operation by doing an HTTP POST to this URL; no body nor extra headers are needed.
+#    value: 
+#      str_replace:  
+#        template: http://142.150.208.240:5000/scale?project_id=$project_id&stack_name=$stack_name&stack_id=$stack_id&min_cluster_size=$min_cluster_size&template_url=$template_url&parameters=$parameters&adjustment=1
+#        params:
+#          $project_id: ca07deedf3864058a8e62797d1711733
+#          $stack_name: { get_param: OS::stack_name }
+#          $stack_id: { get_param: OS::stack_id }
+#          $min_cluster_size: { get_param: min_cluster_size }
+#          $template_url: https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/manual_scaling_full.yaml
+#          $parameters:
+#            str_replace: |
+#              template: { 'image': '$image', 'key': '$key', 'flavor': '$flavor', 'database_flavor': '$database_flavor', 'network': '$network', 'cluster_size': '$cluster_size' }
+#              params:
+#                $image: {get_param: image }
+#                $key: {get_param: key }
+#                $flavor: {get_param: flavor }
+#                $database_flavor: {get_param: database_flavor }
+#                $network: {get_param: network }
+#                $cluster_size: {get_param: cluster_size }
   website_url:
     value:
       str_replace:
@@ -295,15 +306,4 @@ outputs:
             - networks
             - get_param: network
             - 0
-    description: |
-      This URL is the "external" URL that can be used to access the Wordpress site.
-#  ceilometer_query:
-#    value:
-#      str_replace:
-#        template: |
-#          ceilometer statistics -m cpu_util metadata.user_metadata.stack=stackval -p 600 -a avg
-#        params:
-#          stackval:
-#            get_param: OS::stack_id
-#    description: |
-#      This is a Ceilometer query for statistics on the cpu_util meter Samples about OS::Nova::Server instances in this stack.  The parameter selects Samples according to the subject's metadata. When a VM's metadata includes an item of the form metering.X=Y, the corresponding Ceilometer resource has a metadata item of the form user_metadata.X=Y and samples about resources so tagged can be queried with a Ceilometer query term of the form metadata.user_metadata.X=Y.  In this case the nested stacks give their VMs metadata that is passed as a nested stack parameter, and this stack passes a metadata of the form metering.stack=Y, where Y is this stack's ID.
+    description: This URL is the "external" URL that can be used to access the Wordpress site.
