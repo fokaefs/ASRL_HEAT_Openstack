@@ -23,6 +23,8 @@ parameters:
     type: number
     description: Minimum number of worker nodes
     default: 1
+  template_url:
+    type: string
 resources:
   database_root_password:
     type: OS::Heat::RandomString
@@ -92,88 +94,87 @@ resources:
                   - get_param: network
                   - 0
           user_data_format: RAW
-#  cpu_alarm_high:
-#    type: OS::Ceilometer::Alarm
-#    properties:
-#      description: Scale-up if the average CPU > 60% for 1 minute
-#      meter_name: cpu_util
-#      statistic: avg
-#      period: 60
-#      evaluation_periods: 1
-#      threshold: 60
-#      alarm_actions:
-#        str_replace:  
-#          template: http://142.150.208.240:5000/scale?project_id=$project_id&stack_name=$stack_name&stack_id=$stack_id&min_cluster_size=$min_cluster_size&template_url=$template_url&parameters=$parameters&adjustment=1
-#          params:
-#            $project_id: ca07deedf3864058a8e62797d1711733
-#            $stack_name:
-#              get_param: OS::stack_name
-#            $stack_id: 
-#              get_param: OS::stack_id
-#            $min_cluster_size: 
-#              get_param: min_cluster_size
-#            $template_url: https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/manual_scaling_full.yaml
-#            $parameters:
-#              str_replace:
-#                template: "{ 'image': '$image', 'key': '$key', 'flavor': '$flavor', 'database_flavor': '$database_flavor', 'network': '$network', 'cluster_size': '$cluster_size' }"
-#                params:
-#                  $image: 
-#                    get_param: image
-#                  $key: 
-#                    get_param: key
-#                  $flavor: 
-#                    get_param: flavor
-#                  $database_flavor: 
-#                    get_param: database_flavor
-#                  $network: 
-#                    get_param: network
-#                  $cluster_size: 
-#                    get_param: cluster_size
-#      matching_metadata:
-#        metadata.user_metadata.stack:
-#          get_param: OS::stack_id
-#      comparison_operator: gt
-#  cpu_alarm_low:
-#    type: OS::Ceilometer::Alarm
-#    properties:
-#      description: Scale-down if the average CPU < 10% for 1 minute
-#      meter_name: cpu_util
-#      statistic: avg
-#      period: 60
-#      evaluation_periods: 1
-#      threshold: 10
-#      alarm_actions:
-#        str_replace:  
-#          template: http://142.150.208.240:5000/scale?project_id=$project_id&stack_name=$stack_name&stack_id=$stack_id&min_cluster_size=$min_cluster_size&template_url=$template_url&parameters=$parameters&adjustment=-1
-#          params:
-#            $project_id: ca07deedf3864058a8e62797d1711733
-#            $stack_name:
-#              get_param: OS::stack_name
-#            $stack_id: 
-#              get_param: OS::stack_id
-#            $min_cluster_size: 
-#              get_param: min_cluster_size
-#            $template_url: https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/manual_scaling_full.yaml
-#            $parameters:
-#              str_replace:
-#                template: "{ 'image': '$image', 'key': '$key', 'flavor': '$flavor', 'database_flavor': '$database_flavor', 'network': '$network', 'cluster_size': '$cluster_size' }"
-#                params:
-#                  $image: 
-#                    get_param: image
-#                  $key: 
-#                    get_param: key
-#                  $flavor: 
-#                    get_param: flavor
-#                  $database_flavor: 
-#                    get_param: database_flavor
-#                  $network: 
-#                    get_param: network
-#                  $cluster_size: 
-#                    get_param: cluster_size
-#      matching_metadata:
-#        metadata.user_metadata.stack:
-#          get_param: OS::stack_id
-#      comparison_operator: lt
+  scale_up_policy:
+    type: external_scaling_policy.yaml
+    properties:
+      image:
+        get_param: image
+      key:
+        get_param: key
+      flavor:
+        get_param: flavor
+      database_flavor:
+        get_param: database_flavor
+      network:
+        get_param: network
+      cluster_size:
+        get_param: cluster_size
+      min_cluster_size:
+        get_param: min_cluster_size
+      project_id: ca07deedf3864058a8e62797d1711733
+      stack_name: 
+        get_param: OS::stack_name
+      stack_id:
+        get_param: OS::stack_id
+      adjustment: 1
+      template_url:
+        get_param: template_url
+  scale_down_policy:
+    type: external_scaling_policy.yaml
+    properties:
+      image:
+        get_param: image
+      key:
+        get_param: key
+      flavor:
+        get_param: flavor
+      database_flavor:
+        get_param: database_flavor
+      network:
+        get_param: network
+      cluster_size:
+        get_param: cluster_size
+      min_cluster_size:
+        get_param: min_cluster_size
+      project_id: ca07deedf3864058a8e62797d1711733
+      stack_name: 
+        get_param: OS::stack_name
+      stack_id:
+        get_param: OS::stack_id
+      adjustment: -1
+      template_url:
+        get_param: template_url
+  cpu_alarm_high:
+    type: OS::Ceilometer::Alarm
+    properties:
+      description: Scale-up if the average CPU > 60% for 1 minute
+      meter_name: cpu_util
+      statistic: avg
+      period: 60
+      evaluation_periods: 1
+      threshold: 60
+      alarm_actions:
+      - get_attr:
+        - scale_up_policy
+        - scale_url
+      matching_metadata:
+        metadata.user_metadata.stack:
+          get_param: OS::stack_id
+      comparison_operator: gt
+  cpu_alarm_low:
+    type: OS::Ceilometer::Alarm
+    properties:
+      description: Scale-down if the average CPU < 10% for 1 minute
+      meter_name: cpu_util
+      statistic: avg
+      period: 60
+      evaluation_periods: 1
+      threshold: 10
+      alarm_actions:
+      matching_metadata:
+        metadata.user_metadata.stack:
+          get_param: OS::stack_id
+      comparison_operator: lt
   lb:
     type: OS::Nova::Server
     properties:
