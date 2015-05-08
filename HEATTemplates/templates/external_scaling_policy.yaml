@@ -1,0 +1,66 @@
+heat_template_version: 2014-10-16
+description: A resource to produce the API call to the APService
+parameters:
+  image:
+    type: string
+    description: Image used for servers
+  key:
+    type: string
+    description: SSH key to connect to the servers
+  flavor:
+    type: string
+    description: flavor used by the web servers
+  database_flavor:
+    type: string
+    description: flavor used by the db server
+  network:
+    type: string
+    description: Network used by the server
+  cluster_size:
+    type: number
+    description: Number of worker nodes
+  min_cluster_size:
+    type: number
+    description: Minimum number of worker nodes
+    default: 1
+  project_id:
+    type: string
+    description: Tenant ID
+  stack_name:
+    type: string
+    description: Name of the deployed stack
+  stack_id:
+    type: string
+    description: Stack ID corresponding to the deployed stack
+  adjustment:
+    type: number
+    description: Scaling coefficient (number of workers to be added or removed)
+outputs:
+  scale_url:
+    str_replace:  
+      template: http://142.150.208.240:5000/scale?project_id=$project_id&stack_name=$stack_name&stack_id=$stack_id&min_cluster_size=$min_cluster_size&template_url=$template_url&parameters=$parameters&adjustment=-1
+      params:
+        $project_id: ca07deedf3864058a8e62797d1711733
+        $stack_name:
+          get_param: OS::stack_name
+        $stack_id: 
+          get_param: OS::stack_id
+        $min_cluster_size: 
+          get_param: min_cluster_size
+        $template_url: https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/manual_scaling_full.yaml
+        $parameters:
+          str_replace:
+            template: "{ 'image': '$image', 'key': '$key', 'flavor': '$flavor', 'database_flavor': '$database_flavor', 'network': '$network', 'cluster_size': '$cluster_size' }"
+            params:
+              $image: 
+                get_param: image
+              $key: 
+                get_param: key
+              $flavor: 
+                get_param: flavor
+              $database_flavor: 
+                get_param: database_flavor
+              $network: 
+                get_param: network
+              $cluster_size: 
+                get_param: cluster_size
