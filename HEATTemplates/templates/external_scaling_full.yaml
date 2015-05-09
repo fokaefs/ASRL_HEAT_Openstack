@@ -95,7 +95,7 @@ resources:
                   - 0
           user_data_format: RAW
   scale_up_policy:
-    type: external_scaling_policy.yaml
+    type: https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/external_scaling_policy.yaml
     properties:
       image:
         get_param: image
@@ -120,7 +120,7 @@ resources:
       template_url:
         get_param: template_url
   scale_down_policy:
-    type: external_scaling_policy.yaml
+    type: https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/external_scaling_policy.yaml
     properties:
       image:
         get_param: image
