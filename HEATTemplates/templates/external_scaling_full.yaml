@@ -171,6 +171,9 @@ resources:
       evaluation_periods: 1
       threshold: 10
       alarm_actions:
+      - get_attr:
+        - scale_down_policy
+        - scale_url
       matching_metadata:
         metadata.user_metadata.stack:
           get_param: OS::stack_id
