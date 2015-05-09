@@ -42,7 +42,7 @@ outputs:
   scale_url:
     value:
       str_replace:  
-        template: http://142.150.208.240:5000/scale?project_id=$project_id&stack_name=$stack_name&stack_id=$stack_id&min_cluster_size=$min_cluster_size&template_url=$template_url&parameters=$parameters&adjustment=$adjustment
+        template: http://142.150.208.240:5000/scale?project_id=$project_id&stack_name=$stack_name&stack_id=$stack_id&parameters=$parameters&adjustment=$adjustment
         params:
           $project_id:
             get_param: project_id
@@ -50,15 +50,11 @@ outputs:
             get_param: stack_name
           $stack_id: 
             get_param: stack_id
-          $min_cluster_size: 
-            get_param: min_cluster_size
-          $template_url: 
-            get_param: template_url
           $adjustment:
             get_param: adjustment
           $parameters:
             str_replace:
-              template: "{ 'image': '$image', 'key': '$key', 'flavor': '$flavor', 'database_flavor': '$database_flavor', 'network': '$network', 'cluster_size': '$cluster_size' }"
+              template: "{ 'image': '$image', 'key': '$key', 'flavor': '$flavor', 'database_flavor': '$database_flavor', 'network': '$network', 'cluster_size': '$cluster_size', 'template_url': '$template_url', 'min_cluster_size': '$min_cluster_size' }"
               params:
                 $image: 
                   get_param: image
@@ -72,3 +68,7 @@ outputs:
                   get_param: network
                 $cluster_size: 
                   get_param: cluster_size
+                $min_cluster_size: 
+                  get_param: min_cluster_size
+                $template_url: 
+                  get_param: template_url
