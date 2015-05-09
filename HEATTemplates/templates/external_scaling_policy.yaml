@@ -39,8 +39,8 @@ parameters:
     type: string
     description: URL for the stack template
 outputs:
-  value:
-    scale_url:
+  scale_url:
+    value:
       str_replace:  
         template: http://142.150.208.240:5000/scale?project_id=$project_id&stack_name=$stack_name&stack_id=$stack_id&min_cluster_size=$min_cluster_size&template_url=$template_url&parameters=$parameters&adjustment=-1
         params:
