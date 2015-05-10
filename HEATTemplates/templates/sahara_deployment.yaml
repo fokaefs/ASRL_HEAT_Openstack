@@ -1,0 +1,111 @@
+heat_template_version: 2014-10-16
+description: A template to deploy a Sahara cluster for data processing.
+parameters:
+  template_name:
+    type: string
+  hadoop_version:
+    type: string
+  network:
+    type: string
+  plugin_name:
+    type: string
+  master_count:
+    type: number
+  worker_count:
+    type: number
+  image:
+    type: string
+  key_name:
+    type: string
+  cluster_name:
+    type: string
+  master_flavor:
+    type: string
+  master_template_name:
+    type: string
+  worker_flavor:
+    type: string
+  worker_template_name:
+    type: string
+resources:
+  cluster_template:
+    type: OS::Sahara::ClusterTemplate
+    properties:
+      name:
+        get_param: template_name
+      hadoop_version:
+        get_param: hadoop_version
+      neutron_management_network:
+        get_param: network
+      plugin_name:
+        get_param: plugin_name
+      nodes:
+      - count:
+          get_param: master_count
+        name:
+          get_attr:
+          - master_template
+          - name
+        node_group_template_id:
+          get_attr:
+          - master_template
+          - id
+      - count:
+          get_param: worker_count
+        name:
+          get_attr:
+          - worker_template
+          - name
+        node_group_template_id:
+          get_attr:
+          - worker_template
+          - id
+  cluster:
+    type: OS::Sahara::Cluster
+    properties:
+      cluster_template_id:
+      - get_attr:
+        - cluster_template
+        - id
+      default_image_id:
+        get_param: image
+      hadoop_version:
+        get_param: hadoop_version
+      key_name:
+        get_param: key_name
+      name:
+        get_param: cluster_name
+      neutron_management_network:
+        get_param: network
+      plugin_name:
+        get_param: plugin_name
+  master_group_template:
+    type: OS::Sahara::NodeGroupTemplate
+    properties:
+      flavor:
+        get_param: master_flavor
+      hadoop_version:
+        get_param: hadoop_version
+      plugin_name:
+        get_param: plugin_name
+      name:
+        get_param: master_template_name
+      auto_security_group: false
+      node_processes:
+      - master
+      - namenode
+  worker_group_template:
+    type: OS::Sahara::NodeGroupTemplate
+    properties:
+      flavor:
+        get_param: worker_flavor
+      hadoop_version:
+        get_param: hadoop_version
+      plugin_name:
+        get_param: plugin_name
+      name:
+        get_param: worker_template_name
+      auto_security_group: false
+      node_processes:
+      - slave
+      - datanode
