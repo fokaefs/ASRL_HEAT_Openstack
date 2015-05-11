@@ -39,7 +39,9 @@ resources:
         get_param: network
       plugin_name:
         get_param: plugin_name
-      nodes:
+      default_image_id:
+        get_param: image
+      node_groups:
       - count:
           get_param: master_count
         name:
@@ -67,7 +69,7 @@ resources:
       - get_attr:
         - cluster_template
         - id
-      default_image_id:
+      image:
         get_param: image
       hadoop_version:
         get_param: hadoop_version
