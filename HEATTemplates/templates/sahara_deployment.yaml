@@ -44,24 +44,14 @@ resources:
       node_groups:
       - count:
           get_param: master_count
-        name:
-          get_attr:
-          - master_template
-          - name
+        name: master
         node_group_template_id:
-          get_attr:
-          - master_template
-          - id
+          get_resource: master_group_template
       - count:
           get_param: worker_count
-        name:
-          get_attr:
-          - worker_template
-          - name
+        name: workers
         node_group_template_id:
-          get_attr:
-          - worker_template
-          - id
+          get_resource: worker_group_template
   cluster:
     type: OS::Sahara::Cluster
     properties:
