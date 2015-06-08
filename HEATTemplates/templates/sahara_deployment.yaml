@@ -58,9 +58,7 @@ resources:
     type: OS::Sahara::Cluster
     properties:
       cluster_template_id:
-      - get_attr:
-        - cluster_template
-        - id
+        get_resource: cluster_template
       image:
         get_param: image
       hadoop_version:
