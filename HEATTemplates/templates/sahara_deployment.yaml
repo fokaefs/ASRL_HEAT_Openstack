@@ -27,6 +27,8 @@ parameters:
     type: string
   worker_template_name:
     type: string
+  floating_ip_pool:
+    type: string
 resources:
   cluster_template:
     type: OS::Sahara::ClusterTemplate
@@ -82,7 +84,7 @@ resources:
         get_param: plugin_name
       name:
         get_param: master_template_name
-      auto_security_group: false
+      #auto_security_group: false
       node_processes:
       - master
       - namenode
@@ -97,7 +99,7 @@ resources:
         get_param: plugin_name
       name:
         get_param: worker_template_name
-      auto_security_group: false
+      #auto_security_group: false
       node_processes:
       - slave
       - datanode
