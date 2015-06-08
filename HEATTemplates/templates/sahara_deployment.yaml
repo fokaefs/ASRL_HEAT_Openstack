@@ -88,6 +88,8 @@ resources:
       node_processes:
       - master
       - namenode
+      floating_ip_pool:
+        get_param: floating_ip_pool
   worker_group_template:
     type: OS::Sahara::NodeGroupTemplate
     properties:
@@ -103,3 +105,5 @@ resources:
       node_processes:
       - slave
       - datanode
+      floating_ip_pool:
+        get_param: floating_ip_pool
