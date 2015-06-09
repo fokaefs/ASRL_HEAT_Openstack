@@ -21,7 +21,7 @@ resources:
       image:
         get_param: image
       key_name:
-        get_param: key
+        get_param: key_name
       config_drive: true
       metadata:
         metering.stack:
