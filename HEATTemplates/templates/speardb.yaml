@@ -32,8 +32,8 @@ resources:
             #!/bin/bash -v
             add-apt-repository ppa:openjdk-r/ppa
             apt-get update 
-            apt-get install openjdk-8-jre
-            apt-get install dos2unix
+            apt-get install -y openjdk-8-jre
+            apt-get install -y dos2unix
             
             mkdir /var/lib/speardb
             cd /var/lib/speardb
