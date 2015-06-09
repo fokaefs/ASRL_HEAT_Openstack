@@ -43,7 +43,7 @@ resources:
             dos2unix core_only.properties
             
             touch /var/log/speardb.log
-            chmod 776 /var/log/speard.log
+            chmod 776 /var/log/speardb.log
             
             sed -i "/log4j.appender.default.file.file/c\log4j.appender.default.file.file = /var/log/speardb.log" core_only.properties
             
