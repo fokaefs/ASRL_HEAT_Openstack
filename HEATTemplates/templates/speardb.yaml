@@ -33,13 +33,16 @@ resources:
             add-apt-repository ppa:openjdk-r/ppa
             apt-get update 
             apt-get install openjdk-8-jre
+            apt-get install dos2unix
             
             mkdir /var/lib/speardb
             cd /var/lib/speardb
             wget https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/misc_files/core_only.properties -O core_only.properties
             wget https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/misc_files/SpearDB.jar -O SpearDB.jar
             
-            sed 's/log4j.appender.default.file.file = .*/log4j.appender.default.file.file = $log_filepath/'
+            dos2unix core_only.properties
+            
+            sed -i "/log4j.appender.default.file.file/c\log4j.appender.default.file.file = /var/log/speardb.log" core_only.properties
             
             java -jar SpearDB.jar core_only.properties
           params:
