@@ -1,0 +1,48 @@
+heat_template_version: 2014-10-16
+description: A template to deploy a SpearDB instance.
+parameters:
+  log_filepath:
+    type: string
+    default: /var/log/speardb.log
+  flavor:
+    type: string
+    default: m1.small
+  image:
+    type: string
+    default: Ubuntu64.2.1
+  key_name:
+    type: string
+resources:
+  speardb:
+    type: OS::Nova::Server
+    properties:
+      flavor:
+        get_param: flavor
+      image:
+        get_param: image
+      key_name:
+        get_param: key
+      config_drive: true
+      metadata:
+        metering.stack:
+          get_param: OS::stack_id
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash -v
+            add-apt-repository ppa:openjdk-r/ppa
+            apt-get update 
+            apt-get install openjdk-8-jre
+            
+            mkdir /var/lib/speardb
+            cd /var/lib/speardb
+            wget https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/misc_files/core_only.properties -O core_only.properties
+            wget https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/misc_files/SpearDB.jar -O SpearDB.jar
+            
+            sed 's/log4j.appender.default.file.file = .*/log4j.appender.default.file.file = $log_filepath/'
+            
+            java -jar SpearDB.jar core_only.properties
+          params:
+            $log_filepath:
+              get_param: log_filepath
+      
