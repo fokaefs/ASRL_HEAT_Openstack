@@ -5,8 +5,8 @@ parameters:
     type: string
   hadoop_version:
     type: string
-  #network:
-  #  type: string
+  network:
+    type: string
   plugin_name:
     type: string
   master_count:
@@ -27,8 +27,8 @@ parameters:
     type: string
   worker_template_name:
     type: string
-  #floating_ip_pool:
-  #  type: string
+  floating_ip_pool:
+    type: string
 resources:
   cluster_template:
     type: OS::Sahara::ClusterTemplate
@@ -37,8 +37,8 @@ resources:
         get_param: template_name
       hadoop_version:
         get_param: hadoop_version
-      #neutron_management_network:
-      #  get_param: network
+      neutron_management_network:
+        get_param: network
       plugin_name:
         get_param: plugin_name
       default_image_id:
@@ -67,8 +67,8 @@ resources:
         get_param: key_name
       name:
         get_param: cluster_name
-      #neutron_management_network:
-      #  get_param: network
+      neutron_management_network:
+        get_param: network
       plugin_name:
         get_param: plugin_name
   master_group_template:
@@ -86,8 +86,8 @@ resources:
       node_processes:
       - master
       - namenode
-      #floating_ip_pool:
-      #  get_param: floating_ip_pool
+      floating_ip_pool:
+        get_param: floating_ip_pool
   worker_group_template:
     type: OS::Sahara::NodeGroupTemplate
     properties:
@@ -103,5 +103,5 @@ resources:
       node_processes:
       - slave
       - datanode
-      #floating_ip_pool:
-      #  get_param: floating_ip_pool
+      floating_ip_pool:
+        get_param: floating_ip_pool
