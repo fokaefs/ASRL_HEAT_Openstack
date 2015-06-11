@@ -27,8 +27,8 @@ parameters:
     type: string
   worker_template_name:
     type: string
-  floating_ip_pool:
-    type: string
+  #floating_ip_pool:
+  #  type: string
 resources:
   cluster_template:
     type: OS::Sahara::ClusterTemplate
@@ -86,8 +86,8 @@ resources:
       node_processes:
       - master
       - namenode
-      floating_ip_pool:
-        get_param: floating_ip_pool
+      #floating_ip_pool:
+      #  get_param: floating_ip_pool
   worker_group_template:
     type: OS::Sahara::NodeGroupTemplate
     properties:
@@ -103,5 +103,5 @@ resources:
       node_processes:
       - slave
       - datanode
-      floating_ip_pool:
-        get_param: floating_ip_pool
+      #floating_ip_pool:
+      #  get_param: floating_ip_pool
