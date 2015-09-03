@@ -197,3 +197,8 @@ outputs:
       - networks
       - get_param: network
       - 0
+  topology_id:
+    description: The ID of the deployed stack.
+    value:
+      get_param: 
+      - OS::stack_id
