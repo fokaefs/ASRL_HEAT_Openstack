@@ -10,30 +10,24 @@ parameters:
   web_flavor:
     type: string
     description: Size (flavor) of web servers
+    default: m1.small
   db_flavor:
     type: string
     description: Size (flavor) of database servers
+    default: m1.large
   network:
     type: string
     description: Network used by the servers
-  public_network:
-    type: string
-    description: Public (external) network
   cluster_size:
     type: number
     description: Number of web servers
-  min_cluster_size:
-    type: number
-    description: Minimum number of web servers
-  max_cluster_size:
-    type: number
-    description: Maximum number of web servers
   db_root_password:
     type: string
     description: Password for root access to the DB server
 resources:
   db:
     type: OS::Nova::Server
+    name: dabatase
     properties:
       flavor:
         get_param: db_flavor
@@ -47,72 +41,80 @@ resources:
         str_replace:
           template: |
             #!/bin/bash -v
-            bash -c "DEBIAN_FRONTEND=noninteractive aptitude install -q -y mysql-server"  > /dev/null 2> errors.log
-            mysql -uroot -e "UPDATE mysql.user SET Password=PASSWORD('$db_rootpassword') WHERE User='root'; FLUSH PRIVILEGES;" > /dev/null 2> errors.log
-            wget -q http://ceras.eso.yorku.ca/etavirp/mysql/mySqlScript.sql > /dev/null 2> errors.log
-            mysql -uroot -p$db_rootpassword < mySqlScript.sql > /dev/null 2> errors.log
-            rm -rf mySqlScript.sql > /dev/null 2> errors.log
-            # download the config file
-            wget -q http://ceras.eso.yorku.ca/etavirp/mysql/my.cnf -O my.cnf.bkp
-            # generate the new config file with the bind address replaced
-            while read LINE
-            do
-                    LINE=`eval echo $LINE`
-                    echo $LINE >> my.cnf
-            done < my.cnf.bkp
-            # remove the local backup
-            rm -f my.cnf.bkp
-            # do a backup for the file on the server
-            mv /etc/mysql/my.cnf /etc/mysql/my.cnf.bkp
-            # copy the configuration file to the right location
-            mv -f my.cnf /etc/mysql/my.cnf
-                    
-            
+            apt-get update
+            debconf-set-selections <<< "mysql-server mysql-server/root_password password $db_rootpassword"
+            debconf-set-selections <<< "mysql-server mysql-server/root_password_again password $db_rootpassword"
+            apt-get install -y mysql-server
+            wget https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/mySqlScript.sql
+            mysql -uroot -p$db_rootpassword < mySqlScript.sql
+            rm -rf mySqlScript.sql
+            db_host=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
+            echo $db_host
+            wget http://ceras.eso.yorku.ca/etavirp/mysql/my.cnf -O /etc/mysql/my.cnf
+            sed -i "/bind-address/c\bind-address = $db_host" /etc/mysql/my.cnf
+            service mysql restart
+          params:
+            $db_rootpassword:
+              get_attr:
+              - database_root_password
+              - value
+
           params:
             $db_rootpassword:
               get_param: db_root_password
   web_cluster:
     type: OS::Heat::ResourceGroup
+    name: web_cluster
     properties:
       count:
         get_param: cluster_size
       resource_def:
         type: OS::Nova::Server
         properties:
-        flavor:
-          get_param: web_flavor
-        image:
-          get_param: image
-        key_name:
-          get_param: key
-        config_drive: true
-        metadata:
-          metering.stack:
-            get_param: OS::stack_id
-        user_data:
-          str_replace:
-            template: |
-              #!/bin/bash -v
-              apt-get update
-              apt-get install -y tomcat7
-              iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
-              wget http://ceras.eso.yorku.ca/etavirp/tomcat/DatabaseOperations.war -O /var/lib/tomcat7/webapps/DatabaseOperations.war
+          name: web_server_%index%
+          flavor:
+            get_param: web_flavor
+          image:
+            get_param: image
+          key_name:
+            get_param: key
+          config_drive: true
+          metadata:
+            metering.stack:
+              get_param: OS::stack_id
+          user_data:
+            str_replace:
+              template: |
+                #!/bin/bash -v
+                apt-get update
+                apt-get install -y tofrodos
+                apt-get install -y tomcat7
+                iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+                wget http://ceras.eso.yorku.ca/etavirp/tomcat/DatabaseOperations.war -O /var/lib/tomcat7/webapps/DatabaseOperations.war
 
-              /etc/init.d/tomcat7 restart
-              sed -i "/password/c\password=\"root\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
-              sed -i "/url/c\url=\"jdbc:mysql:\\/\\/$db_host:3306\\/SimpleDatabase\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
-              wget http://ceras.eso.yorku.ca/etavirp/tomcat/mysql-connector-java-5.1.10-bin.jar -O /var/lib/tomcat7/webapps/DatabaseOperations/WEB-INF/lib/mysql-connector-java-5.1.10-bin.jar
-            params:
-              $db_host:
-                get_attr:
-                - db
-                - networks
-                - get_param: network
-                - 0
-        user_data_format: RAW
+                /etc/init.d/tomcat7 restart
+                dos2unix /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
+                sed -i "/password/c\password=\"root\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
+                sed -i "/url/c\url=\"jdbc:mysql:\\/\\/$db_host:3306\\/SimpleDatabase\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
+                wget http://ceras.eso.yorku.ca/etavirp/tomcat/mysql-connector-java-5.1.10-bin.jar -O /var/lib/tomcat7/webapps/DatabaseOperations/WEB-INF/lib/mysql-connector-java-5.1.10-bin.jar
+              params:
+                $db_host:
+                  get_attr:
+                  - db
+                  - networks
+                  - get_param: network
+                  - 0
+          user_data_format: RAW
+#  port:
+#    type: OS::Neutron::Port
+#    properties:
+#      network:
+#        get_param: network
+
   lb:
     type: OS::Nova::Server
     properties:
+      name: load_balancer
       flavor:
         get_param: web_flavor
       image:
@@ -128,9 +130,8 @@ resources:
           - get_param: network
           - 0
       config_drive: true
-      networks:
-      - netowrk:
-          get_param: network
+#      networks:
+#      - port: { get_resource: port }
       user_data: |
         #!/bin/bash -v
 
@@ -169,25 +170,27 @@ resources:
         crontab <_crontab
         rm _crontab
       user_data_format: RAW
-  floating_ip:
-    type: OS::Neutron::FloatingIP
-    properties:
-      floating_network: { get_param: public_network }
+#  floating_ip:
+#    type: OS::Neutron::FloatingIP
+#    properties:
+#      floating_network: { get_param: public_network }
 
-  floating_ip_assoc:
-    type: OS::Neutron::FloatingIPAssociation
-    properties:
-      floatingip_id: { get_resource: floating_ip }
-      port_id: { get_attr: [lb, port] }
+#  floating_ip_assoc:
+#    type: OS::Neutron::FloatingIPAssociation
+#    properties:
+#      floatingip_id: { get_resource: floating_ip }
+#      port_id:
+#        get_resource: port
+
 outputs:
-  load_balancer_ip:
-    description: The public IP address of the load balancer.
-    value:
-      get_attr:
-      - lb
-      - networks
-      - get_param: public_network
-      - 0
+#  load_balancer_ip:
+#    description: The public IP address of the load balancer.
+#    value:
+#      get_attr:
+#      - lb
+#      - networks
+#      - get_param: public_network
+#      - 0
   server_ips:
     description: The public IP address of the newly configured Server.
     value:
@@ -200,5 +203,5 @@ outputs:
   topology_id:
     description: The ID of the deployed stack.
     value:
-      get_param: 
+      get_param:
       - OS::stack_id
