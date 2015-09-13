@@ -27,7 +27,6 @@ parameters:
 resources:
   db:
     type: OS::Nova::Server
-    name: dabatase
     properties:
       flavor:
         get_param: db_flavor
@@ -64,7 +63,6 @@ resources:
               get_param: db_root_password
   web_cluster:
     type: OS::Heat::ResourceGroup
-    name: web_cluster
     properties:
       count:
         get_param: cluster_size
@@ -114,7 +112,6 @@ resources:
   lb:
     type: OS::Nova::Server
     properties:
-      name: load_balancer
       flavor:
         get_param: web_flavor
       image:
