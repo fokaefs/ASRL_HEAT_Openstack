@@ -39,30 +39,19 @@ resources:
         type: database
       user_data_format: RAW
       user_data:
-        str_replace:
-          template: |
-            #!/bin/bash -v
-            apt-get update
-            debconf-set-selections <<< "mysql-server mysql-server/root_password password $db_rootpassword"
-            debconf-set-selections <<< "mysql-server mysql-server/root_password_again password $db_rootpassword"
-            apt-get install -y mysql-server
-            wget https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/mySqlScript.sql
-            mysql -uroot -p$db_rootpassword < mySqlScript.sql
-            rm -rf mySqlScript.sql
-            db_host=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
-            echo $db_host
-            wget http://ceras.eso.yorku.ca/etavirp/mysql/my.cnf -O /etc/mysql/my.cnf
-            sed -i "/bind-address/c\bind-address = $db_host" /etc/mysql/my.cnf
-            service mysql restart
-          params:
-            $db_rootpassword:
-              get_attr:
-              - database_root_password
-              - value
-
-          params:
-            $db_rootpassword:
-              get_param: db_root_password
+        #!/bin/bash -v
+        apt-get update
+        debconf-set-selections <<< "mysql-server mysql-server/root_password password $db_rootpassword"
+        debconf-set-selections <<< "mysql-server mysql-server/root_password_again password $db_rootpassword"
+        apt-get install -y mysql-server
+        wget https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/mySqlScript.sql
+        mysql -uroot -proot < mySqlScript.sql
+        rm -rf mySqlScript.sql
+        db_host=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
+        echo $db_host
+        wget http://ceras.eso.yorku.ca/etavirp/mysql/my.cnf -O /etc/mysql/my.cnf
+        sed -i "/bind-address/c\bind-address = $db_host" /etc/mysql/my.cnf
+        service mysql restart
   web_cluster:
     type: OS::Heat::ResourceGroup
     properties:
