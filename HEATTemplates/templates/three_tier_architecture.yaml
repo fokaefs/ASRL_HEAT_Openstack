@@ -38,7 +38,7 @@ resources:
       metadata:
         type: database
       user_data_format: RAW
-      user_data:
+      user_data: |
         #!/bin/bash -v
         apt-get update
         debconf-set-selections <<< "mysql-server mysql-server/root_password password $db_rootpassword"
@@ -89,6 +89,7 @@ resources:
                 sed -i "/password/c\password=\"root\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
                 sed -i "/url/c\url=\"jdbc:mysql:\\/\\/$db_host:3306\\/SimpleDatabase\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
                 wget http://ceras.eso.yorku.ca/etavirp/tomcat/mysql-connector-java-5.1.10-bin.jar -O /var/lib/tomcat7/webapps/DatabaseOperations/WEB-INF/lib/mysql-connector-java-5.1.10-bin.jar
+                service tomcat7 restart
               params:
                 $db_host:
                   get_attr:
