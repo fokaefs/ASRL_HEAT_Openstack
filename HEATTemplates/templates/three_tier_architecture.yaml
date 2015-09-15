@@ -41,8 +41,8 @@ resources:
       user_data: |
         #!/bin/bash -v
         apt-get update
-        debconf-set-selections <<< "mysql-server mysql-server/root_password password $db_rootpassword"
-        debconf-set-selections <<< "mysql-server mysql-server/root_password_again password $db_rootpassword"
+        debconf-set-selections <<< "mysql-server mysql-server/root_password password root"
+        debconf-set-selections <<< "mysql-server mysql-server/root_password_again password root"
         apt-get install -y mysql-server
         wget https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/mySqlScript.sql
         mysql -uroot -proot < mySqlScript.sql
