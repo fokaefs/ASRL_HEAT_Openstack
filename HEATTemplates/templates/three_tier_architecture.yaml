@@ -177,21 +177,43 @@ resources:
 #        get_resource: port
 
 outputs:
-  load_balancer:
-    description: Load balancer info.
+  balancer.ip:
+    description: Load balancer IP.
     value:
       get_attr:
       - lb
-      - show
-  database:
-    description: Database info.
+      - networks
+      - get_param: network
+      - 0
+  balancer.id:
+    description: Load balancer ID.
+    value:
+      get_resource: lb
+  database.ip:
+    description: Database IP.
     value:
       get_attr:
       - db
-      - show
-  cluster_info:
-    description: Web cluster resources info.
+      - networks
+      - get_param: network
+      - 0
+  database.id:
+    description: Database ID.
+    value:
+      get_resource: db
+  workers.ip:
+    description: Worker IPs.
+    value:
+      get_attr:
+        - web_cluster
+        - attributes
+        - networks
+        - get_param: network
+        - 0
+  workers.id:
+    description: Worker IDs.
     value:
       get_attr:
       - web_cluster
-      - show
+      - refs
+        
