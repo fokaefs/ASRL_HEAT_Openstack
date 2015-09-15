@@ -79,7 +79,7 @@ resources:
               template: |
                 #!/bin/bash -v
                 apt-get update
-                apt-get install -y tofrodos
+                apt-get install -y dos2unix
                 apt-get install -y tomcat7
                 iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
                 wget http://ceras.eso.yorku.ca/etavirp/tomcat/DatabaseOperations.war -O /var/lib/tomcat7/webapps/DatabaseOperations.war
