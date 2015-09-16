@@ -18,12 +18,9 @@ parameters:
   network:
     type: string
     description: Network used by the servers
-  cluster_size:
+  web_cluster.size:
     type: number
     description: Number of web servers
-  web_cluster_name:
-    type: string
-    description: Name of the web cluster
 resources:
   db:
     type: OS::Nova::Server
@@ -56,7 +53,7 @@ resources:
     type: OS::Heat::ResourceGroup
     properties:
       count:
-        get_param: cluster_size
+        get_param: web_cluster.size
       resource_def:
         type: OS::Nova::Server
         properties:
@@ -71,9 +68,6 @@ resources:
           metadata:
             metering.stack:
               get_param: OS::stack_id
-            cluster:
-              get_param: web_cluster_name
-            type: worker
           user_data:
             str_replace:
               template: |
@@ -121,9 +115,6 @@ resources:
           - networks
           - get_param: network
           - 0
-        type: balancer
-        cluster:
-          get_param: web_cluster_name
       config_drive: true
 #      networks:
 #      - port: { get_resource: port }
@@ -202,7 +193,7 @@ outputs:
     description: Database ID.
     value:
       get_resource: db
-  workers.ip:
+  web_cluster.ip:
     description: Worker IPs.
     value:
       get_attr:
@@ -211,7 +202,7 @@ outputs:
         - networks
         - get_param: network
         - 0
-  workers.id:
+  web_cluster.id:
     description: Worker IDs.
     value:
       get_attr:
