@@ -122,8 +122,9 @@ resources:
         #!/bin/bash -v
 
         # install dependencies
-        sudo apt-get update
-        sudo apt-get -y install apache2 python
+        apt-get update
+        apt-get -y install apache2 python
+        apt-get -y install default-jdk
 
         cp /etc/apache2/mods-available/proxy.conf /etc/apache2/mods-available/proxy_bkp.conf
         cp /etc/apache2/mods-available/proxy_balancer.conf /etc/apache2/mods-available/proxy_balancer_bkp.conf
