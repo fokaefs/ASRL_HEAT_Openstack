@@ -37,16 +37,16 @@ resources:
       user_data_format: RAW
       user_data: |
         #!/bin/bash -v
-        #apt-get update
-        #debconf-set-selections <<< "mysql-server mysql-server/root_password password root"
-        #debconf-set-selections <<< "mysql-server mysql-server/root_password_again password root"
-        #apt-get install -y mysql-server
-        #wget https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/mySqlScript.sql
-        #mysql -uroot -proot < mySqlScript.sql
-        #rm -rf mySqlScript.sql
+        apt-get update
+        debconf-set-selections <<< "mysql-server mysql-server/root_password password root"
+        debconf-set-selections <<< "mysql-server mysql-server/root_password_again password root"
+        apt-get install -y mysql-server
+        wget https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/mySqlScript.sql
+        mysql -uroot -proot < mySqlScript.sql
+        rm -rf mySqlScript.sql
         db_host=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
         echo $db_host
-        #wget http://ceras.eso.yorku.ca/etavirp/mysql/my.cnf -O /etc/mysql/my.cnf
+        wget http://ceras.eso.yorku.ca/etavirp/mysql/my.cnf -O /etc/mysql/my.cnf
         sed -i "/bind-address/c\bind-address = $db_host" /etc/mysql/my.cnf
         service mysql restart
   web_cluster:
@@ -72,17 +72,17 @@ resources:
             str_replace:
               template: |
                 #!/bin/bash -v
-                #apt-get update
-                #apt-get install -y dos2unix
-                #apt-get install -y tomcat7
+                apt-get update
+                apt-get install -y dos2unix
+                apt-get install -y tomcat7
                 iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
-                #wget http://ceras.eso.yorku.ca/etavirp/tomcat/DatabaseOperations.war -O /var/lib/tomcat7/webapps/DatabaseOperations.war
+                wget http://ceras.eso.yorku.ca/etavirp/tomcat/DatabaseOperations.war -O /var/lib/tomcat7/webapps/DatabaseOperations.war
 
-                #/etc/init.d/tomcat7 restart
-                #dos2unix /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
+                /etc/init.d/tomcat7 restart
+                dos2unix /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
                 sed -i "/password/c\password=\"root\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
                 sed -i "/url/c\url=\"jdbc:mysql:\\/\\/$db_host:3306\\/SimpleDatabase\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
-                #wget http://ceras.eso.yorku.ca/etavirp/tomcat/mysql-connector-java-5.1.10-bin.jar -O /var/lib/tomcat7/webapps/DatabaseOperations/WEB-INF/lib/mysql-connector-java-5.1.10-bin.jar
+                wget http://ceras.eso.yorku.ca/etavirp/tomcat/mysql-connector-java-5.1.10-bin.jar -O /var/lib/tomcat7/webapps/DatabaseOperations/WEB-INF/lib/mysql-connector-java-5.1.10-bin.jar
                 service tomcat7 restart
               params:
                 $db_host:
@@ -122,13 +122,13 @@ resources:
         #!/bin/bash -v
 
         # install dependencies
-        #apt-get update
-        #apt-get -y install apache2 python
-        #apt-get -y install default-jdk
+        apt-get update
+        apt-get -y install apache2 python
+        apt-get -y install default-jdk
 
         iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 9100
-        #cp /etc/apache2/mods-available/proxy.conf /etc/apache2/mods-available/proxy_bkp.conf
-        #cp /etc/apache2/mods-available/proxy_balancer.conf /etc/apache2/mods-available/proxy_balancer_bkp.conf
+        cp /etc/apache2/mods-available/proxy.conf /etc/apache2/mods-available/proxy_bkp.conf
+        cp /etc/apache2/mods-available/proxy_balancer.conf /etc/apache2/mods-available/proxy_balancer_bkp.conf
 
         echo "<IfModule mod_proxy.c>
         ProxyRequests Off
