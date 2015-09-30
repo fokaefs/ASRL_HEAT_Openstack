@@ -45,10 +45,10 @@ resources:
         #mysql -uroot -proot < mySqlScript.sql
         #rm -rf mySqlScript.sql
         db_host=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
-        echo $db_host
+        #echo $db_host
         #wget http://ceras.eso.yorku.ca/etavirp/mysql/my.cnf -O /etc/mysql/my.cnf
         sed -i "/bind-address/c\bind-address = $db_host" /etc/mysql/my.cnf
-        service mysql restart
+        service mysql start
   web_cluster:
     type: OS::Heat::ResourceGroup
     properties:
@@ -80,10 +80,10 @@ resources:
 
                 #/etc/init.d/tomcat7 restart
                 #dos2unix /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
-                sed -i "/password/c\password=\"root\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
+                #sed -i "/password/c\password=\"root\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
                 sed -i "/url/c\url=\"jdbc:mysql:\\/\\/$db_host:3306\\/SimpleDatabase\"" /var/lib/tomcat7/webapps/DatabaseOperations/META-INF/context.xml
                 #wget http://ceras.eso.yorku.ca/etavirp/tomcat/mysql-connector-java-5.1.10-bin.jar -O /var/lib/tomcat7/webapps/DatabaseOperations/WEB-INF/lib/mysql-connector-java-5.1.10-bin.jar
-                service tomcat7 restart
+                service tomcat7 start
               params:
                 $db_host:
                   get_attr:
@@ -126,27 +126,27 @@ resources:
         #apt-get -y install apache2 python
         #apt-get -y install default-jdk
 
-        iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 9100
+        #iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 9100
         #cp /etc/apache2/mods-available/proxy.conf /etc/apache2/mods-available/proxy_bkp.conf
         #cp /etc/apache2/mods-available/proxy_balancer.conf /etc/apache2/mods-available/proxy_balancer_bkp.conf
 
-        echo "<IfModule mod_proxy.c>
-        ProxyRequests Off
+        #echo "<IfModule mod_proxy.c>
+        #ProxyRequests Off
 
-        <Proxy *>
-          AddDefaultCharset off
-          Order deny,allow
-          Allow from all
-        </Proxy>
-        ProxyVia On
-        </IfModule>" | tee /etc/apache2/mods-available/proxy.conf
+        #<Proxy *>
+        #  AddDefaultCharset off
+        #  Order deny,allow
+        #  Allow from all
+        #</Proxy>
+        #ProxyVia On
+        #</IfModule>" | tee /etc/apache2/mods-available/proxy.conf
 
 
-        a2enmod proxy
-        a2enmod proxy_balancer
-        a2enmod proxy_http
-        a2enmod proxy_ajp
-        a2enmod proxy_connect
+        #a2enmod proxy
+        #a2enmod proxy_balancer
+        #a2enmod proxy_http
+        #a2enmod proxy_ajp
+        #a2enmod proxy_connect
 
         service apache2 start
 
@@ -158,8 +158,8 @@ resources:
         crontab <_crontab
         rm _crontab
         
-        wget http://ceras.eso.yorku.ca/etavirp/proxy/ProxyServer.jar > proxy.log
-        nohup java -jar ./ProxyServer.jar -remote-address="127.0.0.1" -remote-port="9100" -control-port="9300" > proxy.log &
+        #wget http://ceras.eso.yorku.ca/etavirp/proxy/ProxyServer.jar > proxy.log
+        nohup java -jar /home/ubuntu/ProxyServer.jar -remote-address="127.0.0.1" -remote-port="9100" -control-port="9300" > /home/ubuntu/proxy.log &
     
       user_data_format: RAW
 #  floating_ip:
