@@ -1,0 +1,287 @@
+heat_template_version: 2014-10-16
+description: Simple three-tier web architecture
+parameters:
+  image:
+    type: string
+    description: Image used for VMs
+  key:
+    type: string
+    description: SSH key to connect to VMs
+  web_flavor:
+    type: string
+    description: Size (flavor) of web servers
+    default: m1.small
+  lb_flavor:
+    type: string
+    description: Size (flavor) of database servers
+    default: m1.large
+  spark_flavor:
+    type: string
+    description: Size (flavor) of spark workers
+    default: m1.medium
+  network:
+    type: string
+    description: Network used by the servers
+  web_cluster.size:
+    type: number
+    description: Number of web servers
+  spark_cluster.size:
+    type: number
+    description: Number of spark workers
+  cassandra_ip:
+    type: string
+    description: IP for Cassandra server
+resources:
+  web_cluster:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count:
+        get_param: web_cluster.size
+      resource_def:
+        type: OS::Nova::Server
+        properties:
+          name: web_server_%index%
+          flavor:
+            get_param: web_flavor
+          image:
+            get_param: image
+          key_name:
+            get_param: key
+          config_drive: true
+          metadata:
+            metering.stack:
+              get_param: OS::stack_id
+          user_data:
+            str_replace:
+              template: |
+                #!/bin/bash -v
+                
+                apt-get upgrade
+                apt-get update
+                apt-get upgrade
+                apt-get install -y default-jre
+                apt-get install -y tomcat7
+                
+                wget https://bitbucket.org/corbar/docker-webapp.legis/raw/6baacda423b510b4a6645067827c1bbe170ada8d/tomcat7/context.xml -O /var/lib/tomcat7/conf/context.xml
+                sed -i 's/SPARK_MASTER_IP/$spark_master/g' /var/lib/tomcat7/conf/context.xml
+                sed -i 's/SPARK_MASTER_IP/$db_host/g' /var/lib/tomcat7/conf/context.xml
+                
+                wget https://bitbucket.org/corbar/docker-webapp.legis/raw/6baacda423b510b4a6645067827c1bbe170ada8d/webapp/webapp-legis.war -O /var/lib/tomcat7/webapps/webapp-legis.war
+                service tomcat7 restart
+              params:
+                $db_host: 
+                    get_param: cassandra_ip
+                $spark_master:
+                    get_attr:
+                    - lb
+                    - attributes
+                    - networks
+                    - get_param: network
+                    - 0
+          user_data_format: RAW
+          
+  spark_cluster:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count:
+        get_param: spark_cluster.size
+      resource_def:
+        type: OS::Nova::Server
+        properties:
+          name: spark_server_%index%
+          flavor:
+            get_param: spark_flavor
+          image:
+            get_param: image
+          key_name:
+            get_param: key
+          config_drive: true
+          metadata:
+            metering.stack:
+              get_param: OS::stack_id
+          user_data:
+            str_replace:
+              template: |
+                #!/bin/bash -v
+                
+                apt-get upgrade
+                apt-get update
+                apt-get upgrade
+                apt-get install -y default-jre
+                
+                curl -s http://d3kbcqa49mib13.cloudfront.net/spark-1.6.1-bin-hadoop2.6.tgz | tar -xz -C /usr/local/
+                mv /usr/local/spark-1.6.1-bin-hadoop2.6 /usr/local/spark
+
+                mkdir /job-dependencies
+                wget http://rodrigoveleda.com/itec/dependency.zip -O /job-dependencies/dependency.zip
+                unzip /job-dependencies/dependency.zip -d /job-dependencies
+                wget https://bitbucket.org/corbar/docker-spark.legis/raw/c892cae99643b4a217f87318debe0f717d337d37/job-dependencies/CVSTSparkJobEngine-0.0.1-SNAPSHOT.jar -O /job-dependencies/CVSTSparkJobEngine-0.0.1-SNAPSHOT.jar
+                wget https://bitbucket.org/corbar/docker-spark.legis/raw/c892cae99643b4a217f87318debe0f717d337d37/job-dependencies/real.json -O /job-dependencies/real.json
+
+                wget https://bitbucket.org/corbar/docker-spark.legis/raw/c892cae99643b4a217f87318debe0f717d337d37/jars/spark-cassandra-connector-assembly-1.6.0-M1-s_2.10.jar -O /spark-cassandra-connector-assembly-1.6.0-M1-s_2.10.jar
+                wget https://bitbucket.org/corbar/docker-spark.legis/raw/c892cae99643b4a217f87318debe0f717d337d37/scripts/spark-defaults.conf -O /spark-defaults.conf
+                
+                myip="$(ip addr show $dev | awk '/inet / {print $2}' | cut -d/ -f1)"
+
+                /usr/local/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://$spark_master:7077 --properties-file /spark-defaults.conf --host $myip --cores 10
+        
+                params:
+                    $spark_master:
+                        get_attr:
+                        - lb
+                        - attributes
+                        - networks
+                        - get_param: network
+                        - 0
+          user_data_format: RAW
+#  port:
+#    type: OS::Neutron::Port
+#    properties:
+#      network:
+#        get_param: network
+
+  lb:
+    type: OS::Nova::Server
+    properties:
+      flavor:
+        get_param: web_flavor
+      image:
+        get_param: image
+      key_name:
+        get_param: key
+      metadata:
+        servers:
+          get_attr:
+          - web_cluster
+          - attributes
+          - networks
+          - get_param: network
+          - 0
+      config_drive: true
+#      networks:
+#      - port: { get_resource: port }
+      user_data: |
+        #!/bin/bash -v
+
+        apt-get update
+        apt-get upgrade
+        apt-get update
+        apt-get install -y apache2
+        apt-get install -y default-jre
+        apt-get install -y unzip
+        
+        a2enmod proxy
+        a2enmod proxy_balancer
+        a2enmod proxy_http
+        a2enmod proxy_ajp
+        a2enmod proxy_connect
+        a2enmod lbmethod_bybusyness
+        a2enmod lbmethod_byrequests
+        
+        cp /etc/apache2/mods-available/proxy.conf /etc/apache2/mods-available/proxy_bkp.conf
+        rm /etc/apache2/mods-available/proxy.conf
+        wget https://bitbucket.org/corbar/docker-load-balancer/raw/87d46d6a5219c6456bf22f3e6b56d009668abd18/lb-conf/proxy.conf -O /etc/apache2/mods-available/proxy.conf
+
+        cp /etc/apache2/mods-available/proxy_balancer.conf /etc/apache2/mods-available/proxy_balancer_bkp.conf
+        rm /etc/apache2/mods-available/proxy_balancer.conf
+        wget https://bitbucket.org/corbar/docker-load-balancer/raw/87d46d6a5219c6456bf22f3e6b56d009668abd18/lb-conf/proxy_balancer.conf -O /etc/apache2/mods-available/proxy_balancer.conf
+
+        cp /etc/apache2/mods-available/ports.conf /etc/apache2/mods-available/ports_bkp.conf
+        rm /etc/apache2/mods-available/ports.conf
+        wget https://bitbucket.org/corbar/docker-load-balancer/raw/87d46d6a5219c6456bf22f3e6b56d009668abd18/lb-conf/ports.conf -O /etc/apache2/mods-available/ports.conf
+        sed -i 's/Listen 80/Listen 9100/g' /etc/apache2/ports.conf
+        
+        sed -i 's/<VirtualHost *:80>/<VirtualHost *:9100>/g' /etc/apache2/sites-available/000-default.conf
+
+        service apache2 restart
+
+        wget https://raw.githubusercontent.com/fokaefs/ASRL_HEAT_Openstack/master/HEATTemplates/templates/update.py -O /etc/apache2/update.py
+
+        # add a cron job to monitor the metadata and update haproxy
+        crontab -l >_crontab || true
+        echo "* * * * * curl -s http://169.254.169.254/openstack/latest/meta_data.json | python /etc/apache2/update.py | /usr/bin/logger -t apache2_update" >>_crontab
+        crontab <_crontab
+        rm _crontab
+        
+        #wget http://ceras.eso.yorku.ca/etavirp/proxy/ProxyServer.jar > proxy.log
+        nohup java -jar /home/ubuntu/ProxyServer.jar -remote-address="127.0.0.1" -remote-port="9100" -control-port="9300" > /home/ubuntu/proxy.log &
+        
+        curl -s http://d3kbcqa49mib13.cloudfront.net/spark-1.6.1-bin-hadoop2.6.tgz | tar -xz -C /usr/local/
+        mv /usr/local/spark-1.6.1-bin-hadoop2.6 /usr/local/spark
+
+        mkdir /job-dependencies
+        wget http://rodrigoveleda.com/itec/dependency.zip -O /job-dependencies/dependency.zip
+        unzip /job-dependencies/dependency.zip -d /job-dependencies
+        wget https://bitbucket.org/corbar/docker-spark.legis/raw/c892cae99643b4a217f87318debe0f717d337d37/job-dependencies/CVSTSparkJobEngine-0.0.1-SNAPSHOT.jar -O /job-dependencies/CVSTSparkJobEngine-0.0.1-SNAPSHOT.jar
+                wget https://bitbucket.org/corbar/docker-spark.legis/raw/c892cae99643b4a217f87318debe0f717d337d37/job-dependencies/real.json -O /job-dependencies/real.json
+
+        wget https://bitbucket.org/corbar/docker-spark.legis/raw/c892cae99643b4a217f87318debe0f717d337d37/jars/spark-cassandra-connector-assembly-1.6.0-M1-s_2.10.jar -O /spark-cassandra-connector-assembly-1.6.0-M1-s_2.10.jar
+        wget https://bitbucket.org/corbar/docker-spark.legis/raw/c892cae99643b4a217f87318debe0f717d337d37/scripts/spark-defaults.conf -O /spark-defaults.conf
+
+        /usr/local/spark/sbin/start-master.sh --properties-file /spark-defaults.conf --host $spark_master
+        
+        params:
+                $spark_master:
+                    get_attr:
+                    - lb
+                    - attributes
+                    - networks
+                    - get_param: network
+                    - 0
+    
+      user_data_format: RAW
+#  floating_ip:
+#    type: OS::Neutron::FloatingIP
+#    properties:
+#      floating_network: { get_param: public_network }
+
+#  floating_ip_assoc:
+#    type: OS::Neutron::FloatingIPAssociation
+#    properties:
+#      floatingip_id: { get_resource: floating_ip }
+#      port_id:
+#        get_resource: port
+
+outputs:
+  balancer.ip:
+    description: Load balancer IP.
+    value:
+      get_attr:
+      - lb
+      - networks
+      - get_param: network
+      - 0
+  balancer.id:
+    description: Load balancer ID.
+    value:
+      get_resource: lb
+  web_cluster.ip:
+    description: Worker IPs.
+    value:
+      get_attr:
+        - web_cluster
+        - attributes
+        - networks
+        - get_param: network
+        - 0
+  web_cluster.id:
+    description: Worker IDs.
+    value:
+      get_attr:
+      - web_cluster
+      - refs
+  spark_cluster.ip:
+    description: Spark Worker IPs.
+    value:
+      get_attr:
+        - spark_cluster
+        - attributes
+        - networks
+        - get_param: network
+        - 0
+  spark_cluster.id:
+    description: Spark Worker IDs.
+    value:
+      get_attr:
+      - spark_cluster
+      - refs

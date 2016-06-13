@@ -17,7 +17,7 @@ ProxyPass / balancer://Valhalla_Cluster/
 <Proxy balancer://Valhalla_Cluster>
 """)
 for i, server in enumerate(new_servers.values()):
-    f.write(' BalancerMember http://{0}:9200/\n'.format(server))
+    f.write(' BalancerMember http://{0}:8080/\n'.format(server))
 f.write("""
  ProxySet lbmethod=bybusyness
 </Proxy>
